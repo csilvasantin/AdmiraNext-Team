@@ -250,7 +250,7 @@
 
       .tw-machine-row {
         display: grid;
-        grid-template-columns: auto auto 1fr auto auto;
+        grid-template-columns: auto auto 1fr auto auto auto;
         gap: 8px;
         align-items: center;
         padding: 10px 0;
@@ -352,6 +352,21 @@
       }
       .tw-machine-send:hover { opacity: 0.88; }
       .tw-machine-send:disabled { opacity: 0.5; }
+
+      .tw-machine-approve {
+        padding: 8px 14px;
+        border-radius: 10px;
+        border: none;
+        background: #d4a574;
+        color: white;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .tw-machine-approve:hover { opacity: 0.88; }
+      .tw-machine-approve:disabled { opacity: 0.5; }
 
       .tw-machine-info {
         display: flex;
@@ -496,6 +511,6 @@
       AdmiraNext Control v1.4.0 — 2026-03-27
     </footer>
 
-    <script src="./teamwork.js?v=20260327-21" type="module"></script>
+    <script src="./teamwork.js?v=20260327-22" type="module"></script>
   </body>
 </html>

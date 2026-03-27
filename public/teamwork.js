@@ -259,6 +259,7 @@ function renderMachineApproveList(snapshots) {
         <option value="terminal">Terminal</option>
       </select>
       <button class="tw-machine-send" data-machine-send="${m.id}">Enviar</button>
+      <button class="tw-machine-approve" data-machine-approve="${m.id}">Aprobar</button>
     </div>`;
   }).join("");
 
@@ -288,6 +289,31 @@ function renderMachineApproveList(snapshots) {
       } catch {
         btn.textContent = "Error";
         setTimeout(() => { btn.textContent = "Enviar"; btn.disabled = false; }, 2000);
+      }
+    });
+  });
+
+  // Per-machine approve
+  machineApproveList.querySelectorAll(".tw-machine-approve").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const machineId = btn.dataset.machineApprove;
+      const targetSel = machineApproveList.querySelector(`select[data-machine-target="${machineId}"]`);
+      const target = targetSel?.value || "claude";
+      btn.disabled = true;
+      btn.textContent = "...";
+
+      try {
+        const res = await fetch(apiUrl("/api/teamwork/approve-machine"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ machineId, target })
+        });
+        const data = await res.json();
+        btn.textContent = data.ok ? "OK" : "Error";
+        setTimeout(() => { btn.textContent = "Aprobar"; btn.disabled = false; }, 2000);
+      } catch {
+        btn.textContent = "Error";
+        setTimeout(() => { btn.textContent = "Aprobar"; btn.disabled = false; }, 2000);
       }
     });
   });
