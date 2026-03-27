@@ -223,34 +223,61 @@ export async function sendPromptToMachine(machineId, prompt, target = "terminal"
   return result;
 }
 
+function isReachable(machine) {
+  return machineSnapshots.has(machine.id);
+}
+
+function sendKeystroke(machine, useLocal, appName, keyCmd) {
+  return new Promise((resolve) => {
+    const sshArgs = ["-o", "ConnectTimeout=3", "-o", "BatchMode=yes"];
+
+    if (!useLocal) {
+      const conn = machine.ssh.connect_tailscale || "";
+      if (conn.includes("ProxyCommand")) {
+        const proxy = conn.match(/-o\s+'([^']+)'/)?.[1] || conn.match(/-o\s+"([^"]+)"/)?.[1];
+        if (proxy) sshArgs.push("-o", proxy);
+      }
+    }
+
+    const user = machine.ssh.user || "csilvasantin";
+    const host = useLocal ? deriveLocalHostname(machine) : (machine.ssh.ip_tailscale || machine.ssh.host);
+    sshArgs.push(`${user}@${host}`);
+    sshArgs.push(`osascript -e 'tell application "${appName}" to activate' -e 'delay 0.3' -e '${keyCmd}'`);
+
+    execFile("ssh", sshArgs, { timeout: 8_000 }, (error) => {
+      resolve({ machine: machine.name, id: machine.id, ok: !error, error: error?.message });
+    });
+  });
+}
+
 export async function approveAll(target) {
   const data = await readMachines();
   const appName = TARGET_APPS[target] || TARGET_APPS.claude;
-  const sshEnabled = data.machines.filter((m) => m.ssh?.enabled && m.id !== "admira-macmini");
+  const keyCmd = 'tell application "System Events" to key code 36 using control down';
+
+  // Only send to reachable machines (have a recent snapshot)
+  const reachable = data.machines.filter((m) => m.ssh?.enabled && m.id !== "admira-macmini" && isReachable(m));
+  const unreachable = data.machines.filter((m) => m.ssh?.enabled && m.id !== "admira-macmini" && !isReachable(m));
 
   const results = await Promise.allSettled(
-    sshEnabled.map((machine) => {
-      return new Promise((resolve) => {
-        // Try Tailscale first, then .local
-        function attempt(useLocal) {
-          const sshArgs = buildSshArgs(machine, useLocal);
-          // Ctrl+Enter = key code 36 with control modifier
-          sshArgs.push(`osascript -e 'tell application "${appName}" to activate' -e 'delay 0.3' -e 'tell application "System Events" to key code 36 using control down'`);
-
-          execFile("ssh", sshArgs, { timeout: TIMEOUT_MS }, (error) => {
-            if (error && !useLocal && deriveLocalHostname(machine)) {
-              attempt(true);
-            } else {
-              resolve({ machine: machine.name, id: machine.id, ok: !error, error: error?.message });
-            }
-          });
-        }
-        attempt(false);
-      });
+    reachable.map(async (machine) => {
+      // Try .local first (faster on LAN), then Tailscale
+      if (deriveLocalHostname(machine)) {
+        const r = await sendKeystroke(machine, true, appName, keyCmd);
+        if (r.ok) return r;
+      }
+      return sendKeystroke(machine, false, appName, keyCmd);
     })
   );
 
-  return results.map((r) => r.value || { ok: false, error: "rejected" });
+  const output = results.map((r) => r.value || { ok: false, error: "rejected" });
+
+  // Add skipped machines
+  for (const m of unreachable) {
+    output.push({ machine: m.name, id: m.id, ok: false, error: "offline" });
+  }
+
+  return output;
 }
 
 export async function approveMachine(machineId, target) {
@@ -261,22 +288,14 @@ export async function approveMachine(machineId, target) {
   }
 
   const appName = TARGET_APPS[target] || TARGET_APPS.claude;
+  const keyCmd = 'tell application "System Events" to key code 36 using control down';
 
-  function attempt(useLocal) {
-    return new Promise((resolve) => {
-      const sshArgs = buildSshArgs(machine, useLocal);
-      sshArgs.push(`osascript -e 'tell application "${appName}" to activate' -e 'delay 0.3' -e 'tell application "System Events" to key code 36 using control down'`);
-      execFile("ssh", sshArgs, { timeout: TIMEOUT_MS }, (error) => {
-        resolve({ machine: machine.name, id: machine.id, ok: !error, error: error?.message });
-      });
-    });
+  // Try .local first (faster)
+  if (deriveLocalHostname(machine)) {
+    const r = await sendKeystroke(machine, true, appName, keyCmd);
+    if (r.ok) return r;
   }
-
-  let result = await attempt(false);
-  if (!result.ok && deriveLocalHostname(machine)) {
-    result = await attempt(true);
-  }
-  return result;
+  return sendKeystroke(machine, false, appName, keyCmd);
 }
 
 // Periodic snapshots of each machine's screen
@@ -327,11 +346,12 @@ async function captureOneSnapshot(machine) {
     });
   }
 
-  let text = await attempt(false);
-  if (!text && deriveLocalHostname(machine)) {
-    text = await attempt(true);
+  // Try .local first (faster on LAN)
+  if (deriveLocalHostname(machine)) {
+    const text = await attempt(true);
+    if (text) return text;
   }
-  return text;
+  return attempt(false);
 }
 
 export async function refreshAllSnapshots() {
