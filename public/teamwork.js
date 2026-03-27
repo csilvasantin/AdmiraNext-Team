@@ -241,6 +241,7 @@ function renderMachineApproveList(snapshots) {
       : `<div class="tw-machine-monitor-empty">Sin señal</div>`;
     return `
     <div class="tw-machine-row" data-id="${m.id}">
+      <div class="tw-machine-monitor small" data-monitor="${m.id}">${monitorContent}</div>
       <div class="tw-machine-label">
         <span class="tw-machine-name">${m.name}</span><br>
         <span class="tw-machine-member">${m.member}</span>
@@ -252,7 +253,6 @@ function renderMachineApproveList(snapshots) {
         <option value="terminal">Terminal</option>
       </select>
       <button class="tw-machine-send" data-machine-send="${m.id}">Enviar</button>
-      <div class="tw-machine-monitor small" data-monitor="${m.id}">${monitorContent}</div>
     </div>`;
   }).join("");
 
