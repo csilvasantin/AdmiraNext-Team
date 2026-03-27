@@ -250,19 +250,13 @@
 
       .tw-machine-row {
         display: grid;
-        grid-template-columns: 1fr;
+        grid-template-columns: auto 1fr auto auto auto auto auto;
         gap: 8px;
-        padding: 14px 0;
+        align-items: center;
+        padding: 10px 0;
         border-bottom: 1px solid var(--line);
       }
       .tw-machine-row:last-child { border-bottom: none; }
-
-      .tw-machine-top {
-        display: grid;
-        grid-template-columns: auto 1fr auto auto auto auto;
-        gap: 8px;
-        align-items: center;
-      }
 
       .tw-machine-label {
         min-width: 140px;
@@ -282,12 +276,17 @@
         transition: all 0.3s ease;
       }
       .tw-machine-monitor.small {
-        width: 160px;
-        font-size: 6px;
+        width: 120px;
+        font-size: 5px;
       }
       .tw-machine-monitor.expanded {
-        width: 100%;
+        position: absolute;
+        width: 500px;
+        z-index: 10;
+        right: 0;
+        top: -10px;
         font-size: 10px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.3);
       }
       .tw-machine-monitor::after {
         content: "";
@@ -325,9 +324,7 @@
         color: #5f7469;
       }
       .tw-machine-monitor.small .tw-machine-monitor-time { font-size: 5px; }
-      .tw-machine-monitor-wrap {
-        padding-bottom: 8px;
-      }
+      .tw-machine-row { position: relative; }
 
       .tw-machine-input {
         padding: 8px 12px;
@@ -495,9 +492,9 @@
     </main>
 
     <footer style="text-align:center;padding:24px 0 8px;color:var(--muted);font-size:12px;">
-      AdmiraNext Control v1.3.1 — 2026-03-27
+      AdmiraNext Control v1.3.2 — 2026-03-27
     </footer>
 
-    <script src="./teamwork.js?v=20260327-15" type="module"></script>
+    <script src="./teamwork.js?v=20260327-16" type="module"></script>
   </body>
 </html>
