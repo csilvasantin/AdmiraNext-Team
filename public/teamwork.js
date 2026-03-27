@@ -228,7 +228,7 @@ function formatTimeShort(iso) {
 }
 
 function renderMachineApproveList(snapshots) {
-  const filtered = machines.filter((m) => m.id !== "admira-macmini");
+  const filtered = machines;
   if (!filtered.length) {
     machineApproveList.innerHTML = '<p class="tw-empty">Sin equipos disponibles.</p>';
     return;

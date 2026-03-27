@@ -357,7 +357,7 @@ async function captureOneSnapshot(machine) {
 
 export async function refreshAllSnapshots() {
   const data = await readMachines();
-  const sshEnabled = data.machines.filter((m) => m.ssh?.enabled && m.id !== "admira-macmini");
+  const sshEnabled = data.machines.filter((m) => m.ssh?.enabled);
 
   await Promise.allSettled(
     sshEnabled.map(async (machine) => {
