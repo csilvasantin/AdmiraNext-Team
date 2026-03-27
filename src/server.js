@@ -121,7 +121,8 @@ const server = createServer(async (request, response) => {
   if (request.method === "POST" && url.pathname === "/api/teamwork/send") {
     const rawBody = await readRequestBody(request);
     const parsed = rawBody ? JSON.parse(rawBody) : {};
-    let { machineId, prompt } = parsed;
+    let { machineId, prompt, target } = parsed;
+    target = target || "terminal";
 
     if (!machineId || !prompt) {
       sendJson(response, 400, { error: "machineId y prompt son obligatorios" });
@@ -143,8 +144,8 @@ const server = createServer(async (request, response) => {
       }
     }
 
-    const result = await sendPromptToMachine(machineId, prompt);
-    const entry = addEntry(machineId, result.name || machineId, prompt, result.ok, result.error, result.captureId);
+    const result = await sendPromptToMachine(machineId, prompt, target);
+    const entry = addEntry(machineId, result.name || machineId, prompt, result.ok, result.error, result.captureId, target);
     sendJson(response, result.ok ? 200 : 502, { ...result, entry });
     return;
   }

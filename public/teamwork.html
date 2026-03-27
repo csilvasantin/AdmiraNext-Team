@@ -41,7 +41,7 @@
       .tw-quick:focus { outline: none; border-color: var(--accent); }
       .tw-quick::placeholder { color: var(--muted); }
 
-      .tw-row { display: grid; grid-template-columns: 1fr 2fr auto; gap: 10px; align-items: end; }
+      .tw-row { display: grid; grid-template-columns: 1fr auto 2fr auto; gap: 10px; align-items: end; }
 
       .tw-label {
         display: block;
@@ -117,6 +117,20 @@
       .tw-entry-status.sent { background: var(--accent); }
       .tw-entry-status.error { background: var(--offline); }
 
+      .tw-entry-target {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        background: rgba(26, 127, 90, 0.12);
+        color: var(--accent);
+        margin: 0 4px;
+        vertical-align: middle;
+      }
+
       .tw-entry-header {
         display: grid;
         grid-template-columns: auto 1fr auto;
@@ -176,6 +190,14 @@
               <select class="tw-select" id="machineSelect"></select>
             </div>
             <div>
+              <span class="tw-label">Destino</span>
+              <select class="tw-select" id="targetSelect">
+                <option value="claude">Claude</option>
+                <option value="codex">Codex</option>
+                <option value="terminal">Terminal</option>
+              </select>
+            </div>
+            <div>
               <span class="tw-label">Prompt</span>
               <textarea class="tw-textarea" id="promptArea" rows="1" placeholder="Escribe el prompt aquí..."></textarea>
             </div>
@@ -194,6 +216,6 @@
       </section>
     </main>
 
-    <script src="./teamwork.js?v=20260327-4" type="module"></script>
+    <script src="./teamwork.js?v=20260327-5" type="module"></script>
   </body>
 </html>

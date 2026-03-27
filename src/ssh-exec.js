@@ -41,11 +41,17 @@ function buildSshArgs(machine, useLocal) {
   return args;
 }
 
-function captureTerminalText(machine, useLocal) {
+function captureTerminalText(machine, useLocal, appName) {
   return new Promise((resolve) => {
     setTimeout(() => {
       const sshArgs = buildSshArgs(machine, useLocal);
-      sshArgs.push(`osascript -e 'tell application "Terminal" to get contents of front window'`);
+
+      if (appName === "Terminal") {
+        sshArgs.push(`osascript -e 'tell application "Terminal" to get contents of front window'`);
+      } else {
+        // For Claude/Codex: copy visible text via accessibility
+        sshArgs.push(`osascript -e 'tell application "${appName}" to activate' -e 'delay 0.3' -e 'tell application "System Events" to keystroke "a" using command down' -e 'tell application "System Events" to keystroke "c" using command down' -e 'delay 0.3' -e 'return (the clipboard)'`);
+      }
 
       execFile("ssh", sshArgs, { timeout: TIMEOUT_MS }, (error, stdout) => {
         if (error) {
@@ -67,7 +73,13 @@ export function getTerminalCapture(entryId) {
   return terminalCaptures.get(entryId) || null;
 }
 
-export async function sendPromptToMachine(machineId, prompt) {
+const TARGET_APPS = {
+  terminal: "Terminal",
+  claude: "Claude",
+  codex: "Codex"
+};
+
+export async function sendPromptToMachine(machineId, prompt, target = "terminal") {
   const data = await readMachines();
   const machine = data.machines.find((m) => m.id === machineId);
 
@@ -80,8 +92,9 @@ export async function sendPromptToMachine(machineId, prompt) {
   }
 
   const safe = sanitizePrompt(prompt);
+  const appName = TARGET_APPS[target] || TARGET_APPS.terminal;
   const osascript = [
-    'tell application "Terminal" to activate',
+    `tell application "${appName}" to activate`,
     `tell application "System Events" to keystroke "${safe}"`,
     'tell application "System Events" to keystroke return'
   ];
@@ -115,7 +128,7 @@ export async function sendPromptToMachine(machineId, prompt) {
     const captureId = `${machineId}-${Date.now()}`;
     result.captureId = captureId;
 
-    captureTerminalText(machine, usedLocal).then((text) => {
+    captureTerminalText(machine, usedLocal, appName).then((text) => {
       if (text) {
         terminalCaptures.set(captureId, text);
         // Keep max 100 captures

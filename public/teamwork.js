@@ -1,5 +1,6 @@
 const quickInput = document.querySelector("#quickInput");
 const machineSelect = document.querySelector("#machineSelect");
+const targetSelect = document.querySelector("#targetSelect");
 const promptArea = document.querySelector("#promptArea");
 const sendBtn = document.querySelector("#sendBtn");
 const feedback = document.querySelector("#feedback");
@@ -65,7 +66,7 @@ function parseQuickInput(text) {
   return null;
 }
 
-async function send(machineId, prompt) {
+async function send(machineId, prompt, target) {
   sendBtn.disabled = true;
   sendBtn.textContent = "Enviando...";
 
@@ -73,7 +74,7 @@ async function send(machineId, prompt) {
     const res = await fetch(apiUrl("/api/teamwork/send"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ machineId, prompt })
+      body: JSON.stringify({ machineId, prompt, target })
     });
     const data = await res.json();
 
@@ -96,7 +97,7 @@ async function send(machineId, prompt) {
 function handleQuickSend() {
   const parsed = parseQuickInput(quickInput.value);
   if (parsed) {
-    send(parsed.machineId, parsed.prompt);
+    send(parsed.machineId, parsed.prompt, targetSelect.value);
   } else {
     showFeedback("Formato: NombreMáquina texto del prompt", false);
   }
@@ -105,11 +106,12 @@ function handleQuickSend() {
 function handleFormSend() {
   const machineId = machineSelect.value;
   const prompt = promptArea.value.trim();
+  const target = targetSelect.value;
   if (!machineId || !prompt) {
     showFeedback("Selecciona máquina y escribe un prompt", false);
     return;
   }
-  send(machineId, prompt);
+  send(machineId, prompt, target);
 }
 
 function renderHistory(entries) {
@@ -125,7 +127,7 @@ function renderHistory(entries) {
     return `
       <div class="tw-entry">
         <div class="tw-entry-header">
-          <span class="tw-entry-machine">${e.machineName}<span class="tw-entry-status ${e.status}"></span></span>
+          <span class="tw-entry-machine">${e.machineName} <span class="tw-entry-target">${e.target || "terminal"}</span><span class="tw-entry-status ${e.status}"></span></span>
           <span class="tw-entry-prompt">${e.prompt}</span>
           <span class="tw-entry-time">${formatTime(e.sentAt)}</span>
         </div>

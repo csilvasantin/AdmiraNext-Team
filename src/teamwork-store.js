@@ -2,12 +2,13 @@ const MAX_ENTRIES = 100;
 const history = [];
 let nextId = 1;
 
-export function addEntry(machineId, machineName, prompt, ok, error, captureId) {
+export function addEntry(machineId, machineName, prompt, ok, error, captureId, target) {
   const entry = {
     id: nextId++,
     machineId,
     machineName: machineName || machineId,
     prompt,
+    target: target || "terminal",
     sentAt: new Date().toISOString(),
     status: ok ? "sent" : "error",
     error: error || null,
