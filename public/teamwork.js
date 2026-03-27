@@ -1,8 +1,5 @@
 const quickInput = document.querySelector("#quickInput");
-const machineSelect = document.querySelector("#machineSelect");
-const targetSelect = document.querySelector("#targetSelect");
-const promptArea = document.querySelector("#promptArea");
-const sendBtn = document.querySelector("#sendBtn");
+const sendAllBtn = document.querySelector("#sendAllBtn");
 const feedback = document.querySelector("#feedback");
 const historyList = document.querySelector("#historyList");
 
@@ -66,52 +63,27 @@ function parseQuickInput(text) {
   return null;
 }
 
-async function send(machineId, prompt, target) {
-  sendBtn.disabled = true;
-  sendBtn.textContent = "Enviando...";
+async function sendToAll(prompt) {
+  sendAllBtn.disabled = true;
+  sendAllBtn.textContent = "Enviando...";
 
   try {
-    const res = await fetch(apiUrl("/api/teamwork/send"), {
+    const res = await fetch(apiUrl("/api/teamwork/send-all"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ machineId, prompt, target })
+      body: JSON.stringify({ prompt })
     });
     const data = await res.json();
-
-    if (data.ok) {
-      showFeedback(`Enviado a ${data.name || machineId}`, true);
-      quickInput.value = "";
-      promptArea.value = "";
-    } else {
-      showFeedback(`Error: ${data.error}`, false);
-    }
+    const ok = data.results.filter((r) => r.ok).length;
+    showFeedback(`Enviado a ${ok} destinos (Claude + Codex en todos los equipos)`, true);
+    quickInput.value = "";
   } catch (err) {
-    showFeedback(`Error de conexión: ${err.message}`, false);
+    showFeedback(`Error: ${err.message}`, false);
   }
 
-  sendBtn.disabled = false;
-  sendBtn.textContent = "Enviar";
+  sendAllBtn.disabled = false;
+  sendAllBtn.textContent = "Enviar a todos";
   loadHistory();
-}
-
-function handleQuickSend() {
-  const parsed = parseQuickInput(quickInput.value);
-  if (parsed) {
-    send(parsed.machineId, parsed.prompt, targetSelect.value);
-  } else {
-    showFeedback("Formato: NombreMáquina texto del prompt", false);
-  }
-}
-
-function handleFormSend() {
-  const machineId = machineSelect.value;
-  const prompt = promptArea.value.trim();
-  const target = targetSelect.value;
-  if (!machineId || !prompt) {
-    showFeedback("Selecciona máquina y escribe un prompt", false);
-    return;
-  }
-  send(machineId, prompt, target);
 }
 
 function renderHistory(entries) {
@@ -173,12 +145,6 @@ async function loadHistory() {
   }
 }
 
-function populateSelect() {
-  machineSelect.innerHTML = machines.map((m) =>
-    `<option value="${m.id}">${m.name} (${m.member})</option>`
-  ).join("");
-}
-
 async function loadMachines() {
   try {
     const res = await fetch(apiUrl("/api/machines"), { cache: "no-store" });
@@ -186,7 +152,6 @@ async function loadMachines() {
     const data = await res.json();
     machines = data.machines.filter((m) => m.ssh?.enabled);
     isStaticMode = false;
-    populateSelect();
     renderMachineApproveList(null);
   } catch {
     try {
@@ -194,30 +159,14 @@ async function loadMachines() {
       const data = await res.json();
       machines = data.machines.filter((m) => m.ssh?.enabled);
       isStaticMode = true;
-      populateSelect();
       renderMachineApproveList(null);
-      sendBtn.textContent = "Solo lectura";
-      sendBtn.disabled = true;
+      sendAllBtn.textContent = "Solo lectura";
+      sendAllBtn.disabled = true;
     } catch {
-      machineSelect.innerHTML = '<option value="">Sin conexión</option>';
+      // no machines
     }
   }
 }
-
-quickInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    handleQuickSend();
-  }
-});
-
-sendBtn.addEventListener("click", () => {
-  if (quickInput.value.trim()) {
-    handleQuickSend();
-  } else {
-    handleFormSend();
-  }
-});
 
 // Per-machine approve
 const machineApproveList = document.querySelector("#machineApproveList");
@@ -367,6 +316,21 @@ async function approveAll(target, btn, resultEl) {
   btn.disabled = false;
   btn.textContent = target === "claude" ? "Aprobar Claude" : "Aprobar Codex";
 }
+
+quickInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    const prompt = quickInput.value.trim();
+    if (prompt) sendToAll(prompt);
+    else showFeedback("Escribe un prompt", false);
+  }
+});
+
+sendAllBtn.addEventListener("click", () => {
+  const prompt = quickInput.value.trim();
+  if (prompt) sendToAll(prompt);
+  else showFeedback("Escribe un prompt", false);
+});
 
 approveClaudeBtn.addEventListener("click", () => approveAll("claude", approveClaudeBtn, approveClaudeResult));
 approveCodexBtn.addEventListener("click", () => approveAll("codex", approveCodexBtn, approveCodexResult));

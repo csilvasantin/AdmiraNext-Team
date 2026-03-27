@@ -150,6 +150,32 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (request.method === "POST" && url.pathname === "/api/teamwork/send-all") {
+    const rawBody = await readRequestBody(request);
+    const parsed = rawBody ? JSON.parse(rawBody) : {};
+    const prompt = parsed.prompt?.trim();
+    if (!prompt) {
+      sendJson(response, 400, { error: "prompt obligatorio" });
+      return;
+    }
+
+    const data = await readMachines();
+    const sshEnabled = data.machines.filter((m) => m.ssh?.enabled);
+    const results = await Promise.allSettled(
+      sshEnabled.flatMap((machine) => [
+        sendPromptToMachine(machine.id, prompt, "claude"),
+        sendPromptToMachine(machine.id, prompt, "codex")
+      ])
+    );
+
+    const output = results.map((r) => {
+      const v = r.value || { ok: false, error: "rejected" };
+      return { machine: v.name || v.machine, ok: v.ok, error: v.error };
+    });
+    sendJson(response, 200, { ok: true, results: output });
+    return;
+  }
+
   if (request.method === "POST" && url.pathname === "/api/teamwork/approve") {
     const rawBody = await readRequestBody(request);
     const parsed = rawBody ? JSON.parse(rawBody) : {};

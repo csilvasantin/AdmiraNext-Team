@@ -452,30 +452,11 @@
 
       <section class="tw-panel">
         <div class="tw-command">
-          <input class="tw-quick" id="quickInput" type="text"
-                 placeholder="MacBookAir16 dime qué hora es"
-                 autocomplete="off" autofocus>
-          <div class="tw-row">
-            <div>
-              <span class="tw-label">Máquina</span>
-              <select class="tw-select" id="machineSelect"></select>
-            </div>
-            <div>
-              <span class="tw-label">Destino</span>
-              <select class="tw-select" id="targetSelect">
-                <option value="claude">Claude</option>
-                <option value="codex">Codex</option>
-                <option value="terminal">Terminal</option>
-              </select>
-            </div>
-            <div>
-              <span class="tw-label">Prompt</span>
-              <textarea class="tw-textarea" id="promptArea" rows="1" placeholder="Escribe el prompt aquí..."></textarea>
-            </div>
-            <div>
-              <span class="tw-label">&nbsp;</span>
-              <button class="tw-send" id="sendBtn">Enviar</button>
-            </div>
+          <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;">
+            <input class="tw-quick" id="quickInput" type="text"
+                   placeholder="Escribe un prompt para todos los equipos (Claude + Codex)..."
+                   autocomplete="off" autofocus>
+            <button class="tw-send" id="sendAllBtn" style="height:100%;">Enviar a todos</button>
           </div>
         </div>
         <div class="tw-feedback" id="feedback"></div>
@@ -508,9 +489,9 @@
     </main>
 
     <footer style="text-align:center;padding:24px 0 8px;color:var(--muted);font-size:12px;">
-      AdmiraNext Control v1.4.0 — 2026-03-27
+      AdmiraNext Control v1.5.0 — 2026-03-27
     </footer>
 
-    <script src="./teamwork.js?v=20260327-22" type="module"></script>
+    <script src="./teamwork.js?v=20260327-23" type="module"></script>
   </body>
 </html>
