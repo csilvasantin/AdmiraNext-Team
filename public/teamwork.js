@@ -6,6 +6,7 @@ const feedback = document.querySelector("#feedback");
 const historyList = document.querySelector("#historyList");
 
 let machines = [];
+let isStaticMode = false;
 
 function showFeedback(text, ok) {
   feedback.textContent = text;
@@ -59,6 +60,11 @@ function parseQuickInput(text) {
 }
 
 async function send(machineId, prompt) {
+  if (isStaticMode) {
+    showFeedback("Modo solo lectura — conecta al servidor local para enviar", false);
+    return;
+  }
+
   sendBtn.disabled = true;
   sendBtn.textContent = "Enviando...";
 
@@ -130,17 +136,32 @@ async function loadHistory() {
   }
 }
 
+function populateSelect() {
+  machineSelect.innerHTML = machines.map((m) =>
+    `<option value="${m.id}">${m.name} (${m.member})</option>`
+  ).join("");
+}
+
 async function loadMachines() {
   try {
     const res = await fetch("/api/machines", { cache: "no-store" });
+    if (!res.ok) throw new Error("api unavailable");
     const data = await res.json();
     machines = data.machines.filter((m) => m.ssh?.enabled);
-
-    machineSelect.innerHTML = machines.map((m) =>
-      `<option value="${m.id}">${m.name} (${m.member})</option>`
-    ).join("");
+    isStaticMode = false;
+    populateSelect();
   } catch {
-    machineSelect.innerHTML = '<option value="">Sin conexión al servidor</option>';
+    try {
+      const res = await fetch("./machines.json?v=20260327-1", { cache: "no-store" });
+      const data = await res.json();
+      machines = data.machines.filter((m) => m.ssh?.enabled);
+      isStaticMode = true;
+      populateSelect();
+      sendBtn.textContent = "Solo lectura";
+      sendBtn.disabled = true;
+    } catch {
+      machineSelect.innerHTML = '<option value="">Sin conexión</option>';
+    }
   }
 }
 
