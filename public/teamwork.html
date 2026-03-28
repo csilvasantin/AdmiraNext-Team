@@ -501,9 +501,21 @@
       @media (max-width: 640px) {
         .tw-row { grid-template-columns: 1fr; }
       }
+      /* Matrix background */
+      #matrixCanvas {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: -1; opacity: 0.07;
+      }
+      body { background: #050a08 !important; }
+      .app { position: relative; z-index: 1; }
+      .hero, .tw-panel, .tw-approve-section, .tw-machines-approve, .tw-history {
+        background: rgba(238,244,241,0.92) !important;
+        backdrop-filter: blur(8px);
+      }
     </style>
   </head>
   <body>
+    <canvas id="matrixCanvas"></canvas>
     <main class="app">
       <header class="hero">
         <p class="eyebrow">Control remoto — v1.8.1</p>
@@ -571,6 +583,36 @@
       AdmiraNext Control v1.8.1 — 2026-03-28
     </footer>
 
-    <script src="./teamwork.js?v=20260328-5" type="module"></script>
+    <script src="./teamwork.js?v=20260328-6" type="module"></script>
+    <script>
+      (function() {
+        const c = document.getElementById("matrixCanvas");
+        const ctx = c.getContext("2d");
+        c.width = window.innerWidth;
+        c.height = window.innerHeight;
+        window.addEventListener("resize", () => { c.width = window.innerWidth; c.height = window.innerHeight; });
+
+        const chars = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ<>{}[]=/\\*+-_";
+        const fontSize = 14;
+        const columns = Math.floor(c.width / fontSize);
+        const drops = Array(columns).fill(1);
+
+        function draw() {
+          ctx.fillStyle = "rgba(5, 10, 8, 0.05)";
+          ctx.fillRect(0, 0, c.width, c.height);
+          ctx.fillStyle = "#0f0";
+          ctx.font = fontSize + "px monospace";
+
+          for (let i = 0; i < drops.length; i++) {
+            const char = chars[Math.floor(Math.random() * chars.length)];
+            ctx.fillStyle = Math.random() > 0.98 ? "#fff" : "#0f0";
+            ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+            if (drops[i] * fontSize > c.height && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
+          }
+        }
+        setInterval(draw, 45);
+      })();
+    </script>
   </body>
 </html>
