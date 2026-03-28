@@ -341,8 +341,17 @@ async function approveAll(target, btn, resultEl) {
     resultEl.innerHTML = `<strong>${okList.length} aprobados</strong> — ${parts.join(" | ")}`;
     resultEl.classList.add(okList.length > 0 ? "tw-approve-success" : "tw-approve-error");
 
-    // Refresh snapshots after 3s to show updated screens
-    setTimeout(loadSnapshots, 3000);
+    // Refresh snapshots after 4s to show updated screens (save result first)
+    const savedResult = resultEl.innerHTML;
+    const savedClass = resultEl.className;
+    setTimeout(() => {
+      loadSnapshots();
+      // Restore result after snapshot refresh
+      setTimeout(() => {
+        resultEl.innerHTML = savedResult;
+        resultEl.className = savedClass;
+      }, 500);
+    }, 4000);
   } catch (err) {
     resultEl.textContent = `Error: ${err.message}`;
     resultEl.classList.add("tw-approve-error");
