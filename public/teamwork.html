@@ -613,7 +613,7 @@
       <header class="hero">
         <div class="hero-inner">
           <div class="hero-text">
-            <p class="eyebrow">Control remoto — v2.1.5</p>
+            <p class="eyebrow">Control remoto — v2.1.6</p>
             <h1>AdmiraNext Control</h1>
             <p class="subtitle">Envía prompts y aprueba acciones en Claude y Codex de todos los equipos de Admira Next.</p>
             <nav class="tw-nav"><a href="./index.html">Volver al dashboard</a></nav>
@@ -770,55 +770,47 @@
       })();
     </script>
     <script>
-      // Matrix glitch effect on subtitle text
+      // Matrix glitch effect on subtitle text — zero layout shift
       (function () {
         const CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         function initMatrixGlitch(el) {
           const original = el.textContent;
-          // Measure each character's natural width BEFORE replacing content
-          const measured = original.split('').map((ch) => {
-            const probe = document.createElement('span');
-            probe.style.visibility = 'hidden';
-            probe.style.position = 'absolute';
-            probe.textContent = ch;
-            el.appendChild(probe);
-            const w = probe.getBoundingClientRect().width;
-            el.removeChild(probe);
-            return { ch, w };
-          });
-
           el.textContent = '';
-          const spans = measured.map(({ ch, w }) => {
-            const s = document.createElement('span');
-            s.textContent = ch;
-            s.dataset.ch = ch;
-            // Lock the width so katakana replacements never reflow the layout
-            s.style.display = 'inline-block';
-            s.style.width = w + 'px';
-            s.style.textAlign = 'center';
-            s.style.overflow = 'hidden';
-            return s;
+
+          // Each character gets a wrapper with the REAL char always occupying space,
+          // and an ABSOLUTE-positioned overlay for the glitch — layout never shifts.
+          const chars = original.split('').map((ch) => {
+            const wrapper = document.createElement('span');
+            wrapper.style.cssText = 'position:relative;display:inline-block;';
+
+            const real = document.createElement('span');
+            real.textContent = ch;
+
+            const glitch = document.createElement('span');
+            glitch.textContent = ch;
+            glitch.style.cssText = 'position:absolute;left:0;top:0;width:100%;text-align:center;opacity:0;color:#00ff41;text-shadow:0 0 6px #00ff41;pointer-events:none;';
+
+            wrapper.appendChild(real);
+            wrapper.appendChild(glitch);
+            el.appendChild(wrapper);
+            return { real, glitch, ch };
           });
-          spans.forEach((s) => el.appendChild(s));
 
           function glitchNext() {
-            const eligible = spans.filter((s) => s.dataset.ch.trim() !== '');
+            const eligible = chars.filter((c) => c.ch.trim() !== '');
             const count = Math.floor(Math.random() * 3) + 1;
             for (let i = 0; i < count; i++) {
-              const span = eligible[Math.floor(Math.random() * eligible.length)];
+              const c = eligible[Math.floor(Math.random() * eligible.length)];
               let iter = 0;
               const total = Math.floor(Math.random() * 7) + 4;
               const tid = setInterval(() => {
-                span.textContent = CHARS[Math.floor(Math.random() * CHARS.length)];
-                span.style.color = '#00ff41';
-                span.style.textShadow = '0 0 6px #00ff41';
-                span.style.opacity = Math.random() > 0.25 ? '1' : '0.2';
+                c.glitch.textContent = CHARS[Math.floor(Math.random() * CHARS.length)];
+                c.glitch.style.opacity = Math.random() > 0.25 ? '1' : '0.3';
+                c.real.style.opacity = '0';
                 if (++iter >= total) {
                   clearInterval(tid);
-                  span.textContent = span.dataset.ch;
-                  span.style.color = '';
-                  span.style.textShadow = '';
-                  span.style.opacity = '';
+                  c.glitch.style.opacity = '0';
+                  c.real.style.opacity = '';
                 }
               }, 55);
             }
