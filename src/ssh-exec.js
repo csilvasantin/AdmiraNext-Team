@@ -458,18 +458,39 @@ async function captureDesktopScreenshot(machine) {
     });
   }
 
-  // Remote: SCP the /tmp/tw_screen.jpg maintained by LaunchAgent (Cmd+Shift+3)
+  // Remote: trigger Cmd+Shift+3, convert latest screenshot, SCP back
   function attempt(useLocal) {
     return new Promise((resolve_) => {
-      const user = machine.ssh.user || "csilvasantin";
-      const host = useLocal
-        ? deriveLocalHostname(machine)
-        : (machine.ssh.ip_tailscale || machine.ssh.host);
-      const scpArgs = buildScpArgs(machine, useLocal);
-      scpArgs.push(`${user}@${host}:/tmp/tw_screen.jpg`, localPath);
+      const sshArgs = buildSshArgs(machine, useLocal);
+      // Cmd+Shift+3 = native screenshot to Desktop, then convert and clean up
+      sshArgs.push(`osascript -e 'tell application "System Events" to key code 20 using {command down, shift down}' && sleep 2 && latest=$(ls -t "$HOME/Desktop/Captura de pantalla"*.png "$HOME/Desktop/Screenshot"*.png 2>/dev/null | head -1) && [ -n "$latest" ] && sips -Z 960 -s format jpeg "$latest" --out /tmp/tw_screen.jpg >/dev/null 2>&1 && rm "$latest" && echo OK`);
 
-      execFile("scp", scpArgs, { timeout: TIMEOUT_MS }, (scpErr) => {
-        resolve_(scpErr ? null : filename);
+      execFile("ssh", sshArgs, { timeout: 20_000 }, (err, stdout) => {
+        if (err || !stdout?.includes("OK")) {
+          // Fallback: just SCP whatever is already at /tmp/tw_screen.jpg
+          const user = machine.ssh.user || "csilvasantin";
+          const host = useLocal
+            ? deriveLocalHostname(machine)
+            : (machine.ssh.ip_tailscale || machine.ssh.host);
+          const scpArgs = buildScpArgs(machine, useLocal);
+          scpArgs.push(`${user}@${host}:/tmp/tw_screen.jpg`, localPath);
+          execFile("scp", scpArgs, { timeout: TIMEOUT_MS }, (scpErr) => {
+            resolve_(scpErr ? null : filename);
+          });
+          return;
+        }
+
+        // SCP the fresh screenshot back
+        const user = machine.ssh.user || "csilvasantin";
+        const host = useLocal
+          ? deriveLocalHostname(machine)
+          : (machine.ssh.ip_tailscale || machine.ssh.host);
+        const scpArgs = buildScpArgs(machine, useLocal);
+        scpArgs.push(`${user}@${host}:/tmp/tw_screen.jpg`, localPath);
+
+        execFile("scp", scpArgs, { timeout: TIMEOUT_MS }, (scpErr) => {
+          resolve_(scpErr ? null : filename);
+        });
       });
     });
   }
