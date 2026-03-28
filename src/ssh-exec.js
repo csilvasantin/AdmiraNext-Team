@@ -458,26 +458,18 @@ async function captureDesktopScreenshot(machine) {
     });
   }
 
-  // Remote: SSH + Python/Quartz (fast, ~2s)
+  // Remote: SCP the /tmp/tw_screen.jpg maintained by LaunchAgent (Cmd+Shift+3)
   function attempt(useLocal) {
     return new Promise((resolve_) => {
-      const sshArgs = buildSshArgs(machine, useLocal);
-      sshArgs.push(PYTHON_CAPTURE_REMOTE);
+      const user = machine.ssh.user || "csilvasantin";
+      const host = useLocal
+        ? deriveLocalHostname(machine)
+        : (machine.ssh.ip_tailscale || machine.ssh.host);
+      const scpArgs = buildScpArgs(machine, useLocal);
+      scpArgs.push(`${user}@${host}:/tmp/tw_screen.jpg`, localPath);
 
-      execFile("ssh", sshArgs, { timeout: 15_000 }, (err, stdout) => {
-        if (err || !stdout?.includes("OK")) return resolve_(null);
-
-        // SCP the file back
-        const user = machine.ssh.user || "csilvasantin";
-        const host = useLocal
-          ? deriveLocalHostname(machine)
-          : (machine.ssh.ip_tailscale || machine.ssh.host);
-        const scpArgs = buildScpArgs(machine, useLocal);
-        scpArgs.push(`${user}@${host}:/tmp/tw_screen.jpg`, localPath);
-
-        execFile("scp", scpArgs, { timeout: TIMEOUT_MS }, (scpErr) => {
-          resolve_(scpErr ? null : filename);
-        });
+      execFile("scp", scpArgs, { timeout: TIMEOUT_MS }, (scpErr) => {
+        resolve_(scpErr ? null : filename);
       });
     });
   }
