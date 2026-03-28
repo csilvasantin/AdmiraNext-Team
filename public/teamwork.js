@@ -282,7 +282,7 @@ function renderMachineApproveList(snapshots) {
         const data = await res.json();
         if (data.ok) {
           btn.textContent = "✅";
-          btn.style.background = "#2d6a4f";
+          btn.style.background = "#0984e3";
           // Refresh snapshot for this machine after 3s
           setTimeout(loadSnapshots, 3000);
         } else {
