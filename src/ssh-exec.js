@@ -446,11 +446,11 @@ async function captureDesktopScreenshot(machine) {
   const localPath = resolve(SCREENSHOTS_DIR, filename);
 
   if (isLocalMachine(machine)) {
-    // Local: use launchctl asuser screencapture, then resize with sips
+    // Local: captura el display de Claude (ID=2, pantalla vertical izquierda)
+    // donde siempre está Claude Desktop y donde aparecen los diálogos de aprobación
     return new Promise((resolve_) => {
-      execFile("launchctl", ["asuser", String(process.getuid()), "screencapture", "-x", "-t", "jpg", localPath], { timeout: 10_000 }, (err) => {
+      execFile("launchctl", ["asuser", String(process.getuid()), "screencapture", "-D", "2", "-x", "-t", "jpg", localPath], { timeout: 10_000 }, (err) => {
         if (err) return resolve_(null);
-        // Resize to max 960px to keep it small (~80-120KB)
         execFile("sips", ["-Z", "960", localPath, "--out", localPath], { timeout: 5_000 }, () => {
           resolve_(filename);
         });
