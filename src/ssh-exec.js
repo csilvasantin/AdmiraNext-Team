@@ -443,8 +443,20 @@ export function getAllSnapshots() {
   return result;
 }
 
-// Python/Quartz command for desktop screenshot (fast, works via SSH)
-const PYTHON_CAPTURE_CMD = 'python3 -c "import Quartz.CoreGraphics as CG;from AppKit import NSBitmapImageRep,NSJPEGFileType;i=CG.CGWindowListCreateImage(CG.CGRectInfinite,CG.kCGWindowListOptionOnScreenOnly,CG.kCGNullWindowID,CG.kCGWindowImageDefault);r=NSBitmapImageRep.alloc().initWithCGImage_(i);d=r.representationUsingType_properties_(NSJPEGFileType,{});d.writeToFile_atomically_(\'/tmp/tw_screen.jpg\',True);print(\'OK\')" 2>/dev/null';
+// Python/Quartz remote screenshot: write script to file then run it
+const PYTHON_CAPTURE_REMOTE = `cat > /tmp/tw_snap.py << 'PYEOF'
+import Quartz.CoreGraphics as CG
+from AppKit import NSBitmapImageRep, NSJPEGFileType
+i = CG.CGWindowListCreateImage(CG.CGRectInfinite, CG.kCGWindowListOptionOnScreenOnly, CG.kCGNullWindowID, CG.kCGWindowImageDefault)
+if i:
+    r = NSBitmapImageRep.alloc().initWithCGImage_(i)
+    d = r.representationUsingType_properties_(NSJPEGFileType, {})
+    d.writeToFile_atomically_("/tmp/tw_screen.jpg", True)
+    print("OK")
+else:
+    print("FAIL")
+PYEOF
+python3 /tmp/tw_snap.py 2>/dev/null`;
 
 // Capture desktop screenshot for a machine, save locally
 async function captureDesktopScreenshot(machine) {
@@ -464,7 +476,7 @@ async function captureDesktopScreenshot(machine) {
   function attempt(useLocal) {
     return new Promise((resolve_) => {
       const sshArgs = buildSshArgs(machine, useLocal);
-      sshArgs.push(PYTHON_CAPTURE_CMD);
+      sshArgs.push(PYTHON_CAPTURE_REMOTE);
 
       execFile("ssh", sshArgs, { timeout: 15_000 }, (err, stdout) => {
         if (err || !stdout?.includes("OK")) return resolve_(null);
