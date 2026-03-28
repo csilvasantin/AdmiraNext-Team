@@ -230,6 +230,19 @@
         font-size: 12px;
         color: var(--muted);
         min-height: 18px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+      }
+      .tw-approve-success {
+        background: rgba(45, 106, 79, 0.12);
+        color: #2d6a4f;
+        border: 1px solid rgba(45, 106, 79, 0.2);
+      }
+      .tw-approve-error {
+        background: rgba(193, 18, 31, 0.08);
+        color: #c1121f;
+        border: 1px solid rgba(193, 18, 31, 0.15);
       }
 
       .tw-machines-approve {
@@ -444,7 +457,7 @@
   <body>
     <main class="app">
       <header class="hero">
-        <p class="eyebrow">Control remoto — v1.5.3</p>
+        <p class="eyebrow">Control remoto — v1.6.0</p>
         <h1>AdmiraNext Control</h1>
         <p class="subtitle">Envía prompts y aprueba acciones en Claude y Codex de todo el equipo.</p>
         <nav class="tw-nav"><a href="./index.html">Volver al dashboard</a></nav>
@@ -495,7 +508,7 @@
     </main>
 
     <footer style="text-align:center;padding:24px 0 8px;color:var(--muted);font-size:12px;">
-      AdmiraNext Control v1.5.0 — 2026-03-27
+      AdmiraNext Control v1.6.0 — 2026-03-28
     </footer>
 
     <script src="./teamwork.js?v=20260327-27" type="module"></script>

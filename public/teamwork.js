@@ -259,7 +259,7 @@ function renderMachineApproveList(snapshots) {
       const targetSel = machineApproveList.querySelector(`select[data-machine-target="${machineId}"]`);
       const target = targetSel?.value || "claude";
       btn.disabled = true;
-      btn.textContent = "...";
+      btn.textContent = "⏳";
 
       try {
         const res = await fetch(apiUrl("/api/teamwork/approve-machine"), {
@@ -268,11 +268,23 @@ function renderMachineApproveList(snapshots) {
           body: JSON.stringify({ machineId, target })
         });
         const data = await res.json();
-        btn.textContent = data.ok ? "OK" : "Error";
-        setTimeout(() => { btn.textContent = "Aprobar"; btn.disabled = false; }, 2000);
+        if (data.ok) {
+          btn.textContent = "✅";
+          btn.style.background = "#2d6a4f";
+          // Refresh snapshot for this machine after 3s
+          setTimeout(loadSnapshots, 3000);
+        } else {
+          btn.textContent = data.error === "offline" ? "⏭️ Offline" : "❌";
+          btn.style.background = "#c1121f";
+        }
+        setTimeout(() => {
+          btn.textContent = "Aprobar";
+          btn.style.background = "";
+          btn.disabled = false;
+        }, 3000);
       } catch {
-        btn.textContent = "Error";
-        setTimeout(() => { btn.textContent = "Aprobar"; btn.disabled = false; }, 2000);
+        btn.textContent = "❌";
+        setTimeout(() => { btn.textContent = "Aprobar"; btn.style.background = ""; btn.disabled = false; }, 2000);
       }
     });
   });
@@ -307,6 +319,7 @@ async function approveAll(target, btn, resultEl) {
   btn.disabled = true;
   btn.textContent = "Aprobando...";
   resultEl.textContent = "";
+  resultEl.className = "tw-approve-result";
 
   try {
     const res = await fetch(apiUrl("/api/teamwork/approve"), {
@@ -315,12 +328,24 @@ async function approveAll(target, btn, resultEl) {
       body: JSON.stringify({ target })
     });
     const data = await res.json();
-    const ok = data.results.filter((r) => r.ok).length;
-    const fail = data.results.filter((r) => !r.ok).length;
-    const names = data.results.map((r) => `${r.machine}: ${r.ok ? "OK" : "error"}`).join(" | ");
-    resultEl.textContent = `${ok} aprobados, ${fail} errores — ${names}`;
+    const okList = data.results.filter((r) => r.ok);
+    const failList = data.results.filter((r) => !r.ok && !r.skipped);
+    const skipped = data.results.filter((r) => r.skipped);
+
+    // Visual feedback with icons
+    const parts = [];
+    for (const r of okList) parts.push(`✅ ${r.machine}`);
+    for (const r of failList) parts.push(`❌ ${r.machine}`);
+    if (skipped.length) parts.push(`⏭️ ${skipped.length} offline`);
+
+    resultEl.innerHTML = `<strong>${okList.length} aprobados</strong> — ${parts.join(" | ")}`;
+    resultEl.classList.add(okList.length > 0 ? "tw-approve-success" : "tw-approve-error");
+
+    // Refresh snapshots after 3s to show updated screens
+    setTimeout(loadSnapshots, 3000);
   } catch (err) {
     resultEl.textContent = `Error: ${err.message}`;
+    resultEl.classList.add("tw-approve-error");
   }
 
   btn.disabled = false;

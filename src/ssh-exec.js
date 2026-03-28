@@ -264,10 +264,55 @@ function isReachable(machine) {
   return machineSnapshots.has(machine.id);
 }
 
-function sendKeystroke(machine, useLocal, appName, keyCmd) {
+// Build the osascript command for approval based on target app
+function buildApproveScript(appName) {
+  if (appName === "Claude") {
+    // Claude: Ctrl+Enter to approve
+    return `tell application "Claude" to activate
+delay 0.3
+tell application "System Events" to key code 36 using control down`;
+  }
+  if (appName === "Codex") {
+    // Codex: Try clicking the Approve/Aprobar button via accessibility, fallback to Ctrl+Y
+    return `tell application "Codex" to activate
+delay 0.5
+tell application "System Events"
+  tell process "Codex"
+    set found to false
+    -- Search for approve-like buttons in the UI
+    try
+      set allBtns to every button of front window
+      repeat with b in allBtns
+        try
+          set btnName to name of b
+          if btnName contains "Approve" or btnName contains "Aprobar" or btnName contains "Accept" or btnName contains "Aceptar" or btnName contains "Run" or btnName contains "Confirm" or btnName contains "Yes" then
+            click b
+            set found to true
+            exit repeat
+          end if
+        end try
+      end repeat
+    end try
+    -- If no button found, try Ctrl+Enter as fallback
+    if not found then
+      key code 36 using control down
+    end if
+  end tell
+end tell`;
+  }
+  // Terminal fallback
+  return `tell application "Terminal" to activate
+delay 0.3
+tell application "System Events" to key code 36 using control down`;
+}
+
+function sendKeystroke(machine, useLocal, appName) {
+  const script = buildApproveScript(appName);
+
   // Local machine: run directly
   if (isLocalMachine(machine)) {
-    return execLocalMulti(["-e", `tell application "${appName}" to activate`, "-e", "delay 0.3", "-e", keyCmd]).then(({ error }) => ({
+    const args = script.split("\n").flatMap((line) => ["-e", line.trim()]).filter((_, i) => i % 2 === 1 ? _ !== "" : true);
+    return execLocal(script).then(({ error }) => ({
       machine: machine.name, id: machine.id, ok: !error, error: error?.message
     }));
   }
@@ -286,7 +331,10 @@ function sendKeystroke(machine, useLocal, appName, keyCmd) {
     const user = machine.ssh.user || "csilvasantin";
     const host = useLocal ? deriveLocalHostname(machine) : (machine.ssh.ip_tailscale || machine.ssh.host);
     sshArgs.push(`${user}@${host}`);
-    sshArgs.push(`osascript -e 'tell application "${appName}" to activate' -e 'delay 0.3' -e '${keyCmd}'`);
+
+    // Build remote osascript command from script lines
+    const remoteCmd = script.split("\n").map((l) => `-e '${l.trim()}'`).join(" ");
+    sshArgs.push(`osascript ${remoteCmd}`);
 
     execFile("ssh", sshArgs, { timeout: 8_000 }, (error) => {
       resolve({ machine: machine.name, id: machine.id, ok: !error, error: error?.message });
@@ -297,30 +345,38 @@ function sendKeystroke(machine, useLocal, appName, keyCmd) {
 export async function approveAll(target) {
   const data = await readMachines();
   const appName = TARGET_APPS[target] || TARGET_APPS.claude;
-  const keyCmd = 'tell application "System Events" to key code 36 using control down';
 
-  // Send to all reachable machines including this one (macmini)
+  // ONLY send to reachable (online) machines — skip offline immediately
   const sshEnabled = data.machines.filter((m) => m.ssh?.enabled);
-  const reachable = sshEnabled.filter((m) => isReachable(m) || m.id === "admira-macmini");
-  const unreachable = sshEnabled.filter((m) => !isReachable(m) && m.id !== "admira-macmini");
+  const reachable = sshEnabled.filter((m) => isReachable(m) || isLocalMachine(m));
+  const unreachable = sshEnabled.filter((m) => !isReachable(m) && !isLocalMachine(m));
 
   const results = await Promise.allSettled(
     reachable.map(async (machine) => {
       // Try .local first (faster on LAN), then Tailscale
-      if (deriveLocalHostname(machine)) {
-        const r = await sendKeystroke(machine, true, appName, keyCmd);
+      if (deriveLocalHostname(machine) && !isLocalMachine(machine)) {
+        const r = await sendKeystroke(machine, true, appName);
         if (r.ok) return r;
       }
-      return sendKeystroke(machine, false, appName, keyCmd);
+      return sendKeystroke(machine, false, appName);
     })
   );
 
   const output = results.map((r) => r.value || { ok: false, error: "rejected" });
 
-  // Add skipped machines
+  // Add skipped offline machines (instant, no waiting)
   for (const m of unreachable) {
-    output.push({ machine: m.name, id: m.id, ok: false, error: "offline" });
+    output.push({ machine: m.name, id: m.id, ok: false, error: "offline", skipped: true });
   }
+
+  // Trigger screenshot refresh for reachable machines (async, don't block)
+  setTimeout(() => {
+    Promise.allSettled(
+      reachable.map((m) => captureOneSnapshot(m).then((text) => {
+        if (text) machineSnapshots.set(m.id, { text, updatedAt: new Date().toISOString() });
+      }))
+    );
+  }, 2000);
 
   return output;
 }
@@ -332,15 +388,39 @@ export async function approveMachine(machineId, target) {
     return { machine: machineId, ok: false, error: "No encontrada o SSH deshabilitado" };
   }
 
-  const appName = TARGET_APPS[target] || TARGET_APPS.claude;
-  const keyCmd = 'tell application "System Events" to key code 36 using control down';
-
-  // Try .local first (faster)
-  if (deriveLocalHostname(machine)) {
-    const r = await sendKeystroke(machine, true, appName, keyCmd);
-    if (r.ok) return r;
+  // Check if machine is reachable before trying
+  if (!isReachable(machine) && !isLocalMachine(machine)) {
+    return { machine: machine.name, id: machine.id, ok: false, error: "offline" };
   }
-  return sendKeystroke(machine, false, appName, keyCmd);
+
+  const appName = TARGET_APPS[target] || TARGET_APPS.claude;
+
+  let result;
+  // Try .local first (faster)
+  if (deriveLocalHostname(machine) && !isLocalMachine(machine)) {
+    result = await sendKeystroke(machine, true, appName);
+    if (result.ok) {
+      triggerPostApproveSnapshot(machine);
+      return result;
+    }
+  }
+  result = await sendKeystroke(machine, false, appName);
+
+  if (result.ok) {
+    triggerPostApproveSnapshot(machine);
+  }
+
+  return result;
+}
+
+// Capture a fresh snapshot 2s after approval for visual feedback
+function triggerPostApproveSnapshot(machine) {
+  setTimeout(async () => {
+    const text = await captureOneSnapshot(machine);
+    if (text) {
+      machineSnapshots.set(machine.id, { text, updatedAt: new Date().toISOString() });
+    }
+  }, 2000);
 }
 
 // Periodic snapshots of each machine's screen

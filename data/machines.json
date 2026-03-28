@@ -1,6 +1,6 @@
 {
   "team": "AdmiraNext Team",
-  "updatedAt": "2026-03-23T21:00:00Z",
+  "updatedAt": "2026-03-27T18:25:12.622Z",
   "tailnet": "tail48b61c.ts.net",
   "machines": [
     {
@@ -34,7 +34,7 @@
       "location": "Madrid",
       "platform": "macOS",
       "status": "online",
-      "lastSeen": "2026-03-23T21:00:00Z",
+      "lastSeen": "2026-03-27T18:25:12.622Z",
       "currentFocus": "SSH verificado — accesible desde Mac Mini",
       "note": "Tailscale: macbookairnines.tail48b61c.ts.net",
       "ssh": {
