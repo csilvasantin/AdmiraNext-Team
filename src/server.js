@@ -23,6 +23,11 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type"
 };
+const FRIENDLY_ROUTES = new Map([
+  ["/alta", "/new-member.html?preset=creative-macbook-air-clean"],
+  ["/creativa", "/new-member.html?preset=creative-macbook-air-clean"],
+  ["/alta-creativa", "/new-member.html?preset=creative-macbook-air-clean"]
+]);
 
 function sendJson(response, statusCode, payload) {
   response.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8", ...CORS_HEADERS });
@@ -59,6 +64,12 @@ const server = createServer(async (request, response) => {
 
   if (request.method === "OPTIONS") {
     response.writeHead(204, CORS_HEADERS);
+    response.end();
+    return;
+  }
+
+  if ((request.method === "GET" || request.method === "HEAD") && FRIENDLY_ROUTES.has(url.pathname)) {
+    response.writeHead(302, { Location: FRIENDLY_ROUTES.get(url.pathname) });
     response.end();
     return;
   }

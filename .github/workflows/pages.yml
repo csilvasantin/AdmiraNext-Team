@@ -29,6 +29,7 @@ jobs:
         run: |
           mkdir -p _site
           cp public/index.html _site/index.html
+          cp public/alta.html _site/alta.html
           cp public/consejo.html _site/consejo.html
           cp public/styles.css _site/styles.css
           cp public/app.js _site/app.js
