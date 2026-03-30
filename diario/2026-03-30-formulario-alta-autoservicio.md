@@ -20,3 +20,4 @@ AdmiraNext Team
 - Alta local prevista en `http://127.0.0.1:3030/new-member.html`.
 - Alta publica prevista en `https://csilvasantin.github.io/AdmiraNext-Team/new-member.html`.
 - El sistema ya permite incorporar una nueva maquina con menos friccion y sin carga manual inicial.
+- Se ha añadido una URL guiada especifica para el lado creativo del consejo cuando el nuevo MacBook Air llega completamente limpio, sin Tailscale, GitHub ni bots instalados.

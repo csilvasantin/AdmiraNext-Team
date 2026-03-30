@@ -59,6 +59,26 @@ const context = {
   tailnet: "",
   machines: []
 };
+const params = new URLSearchParams(window.location.search);
+const intakePresets = {
+  "creative-macbook-air-clean": {
+    teamArea: "Consejo creativo",
+    role: "Creatividad y experiencia",
+    machineName: "MacBook Air creativo",
+    machineRole: "Equipo creativo",
+    platform: "macOS",
+    color: "plata",
+    status: "maintenance",
+    currentFocus: "Primer arranque del MacBook Air creativo",
+    remoteReady: "no",
+    tailscaleReady: false,
+    sshReady: false,
+    githubReady: false,
+    claudeBotReady: false,
+    codexBotReady: false,
+    needsHelp: "Equipo nuevo sin instalar. Pendiente de Tailscale, GitHub, ClaudeBot y CodexBot."
+  }
+};
 
 function normalizeToken(value) {
   return String(value || "")
@@ -79,13 +99,29 @@ function readDraftFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      return { ...defaultDraft };
+      return applyPreset({ ...defaultDraft });
     }
 
-    return { ...defaultDraft, ...JSON.parse(raw) };
+    return applyPreset({ ...defaultDraft, ...JSON.parse(raw) });
   } catch {
-    return { ...defaultDraft };
+    return applyPreset({ ...defaultDraft });
   }
+}
+
+function applyPreset(draft) {
+  const presetName = params.get("preset");
+  if (!presetName || !intakePresets[presetName]) {
+    return draft;
+  }
+
+  return {
+    ...draft,
+    ...intakePresets[presetName],
+    member: draft.member || "",
+    hostAlias: draft.hostAlias || "",
+    tailscaleIp: draft.tailscaleIp || "",
+    note: draft.note || ""
+  };
 }
 
 function writeDraftToStorage(draft) {
