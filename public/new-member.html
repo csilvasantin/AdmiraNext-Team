@@ -351,6 +351,65 @@
         padding: 22px;
       }
 
+      .setup-card {
+        padding: 22px;
+      }
+
+      .setup-card h2 {
+        margin: 0;
+        font-size: 22px;
+      }
+
+      .setup-card p {
+        margin: 8px 0 0;
+        color: var(--muted);
+      }
+
+      .setup-steps {
+        display: grid;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .setup-step {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 12px;
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .setup-step-num {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 10px;
+        background: rgba(26, 127, 90, 0.12);
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .setup-step strong {
+        display: block;
+        font-size: 14px;
+      }
+
+      .setup-step span {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .setup-step code {
+        font-size: 12px;
+      }
+
       .tip-list {
         display: grid;
         gap: 10px;
@@ -627,6 +686,93 @@
               <div>
                 <strong>La vista previa es tu comprobacion final</strong>
                 <span>Antes de enviar, revisa que el ID sugerido, el host y el foco actual tengan sentido.</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="setup-card intake-panel">
+            <h2>10 pasos para un Mac nuevo</h2>
+            <p>Este es el recorrido recomendado cuando el equipo creativo entra con un MacBook Air limpio, sin instalaciones previas.</p>
+
+            <div class="setup-steps">
+              <div class="setup-step">
+                <div class="setup-step-num">1</div>
+                <div>
+                  <strong>Rellenar esta ficha</strong>
+                  <span>Es el punto de partida para que el equipo sepa quién eres, qué máquina vas a usar y qué te falta.</span>
+                </div>
+              </div>
+
+              <div class="setup-step">
+                <div class="setup-step-num">2</div>
+                <div>
+                  <strong>Instalar Tailscale</strong>
+                  <span>Descarga Tailscale, entra con la cuenta indicada por el equipo y deja el Mac visible dentro de la tailnet.</span>
+                </div>
+              </div>
+
+              <div class="setup-step">
+                <div class="setup-step-num">3</div>
+                <div>
+                  <strong>Activar acceso remoto</strong>
+                  <span>En macOS, ve a Ajustes del Sistema y habilita <code>Inicio de sesion remoto</code> para que luego podamos verificar SSH.</span>
+                </div>
+              </div>
+
+              <div class="setup-step">
+                <div class="setup-step-num">4</div>
+                <div>
+                  <strong>Instalar GitHub CLI</strong>
+                  <span>Necesitamos <code>gh</code> disponible para clonar repos y autenticar el entorno de trabajo.</span>
+                </div>
+              </div>
+
+              <div class="setup-step">
+                <div class="setup-step-num">5</div>
+                <div>
+                  <strong>Hacer login en GitHub</strong>
+                  <span>Ejecuta <code>gh auth login --hostname github.com --git-protocol https --web</code> y deja la sesion valida.</span>
+                </div>
+              </div>
+
+              <div class="setup-step">
+                <div class="setup-step-num">6</div>
+                <div>
+                  <strong>Clonar el repositorio onboarding</strong>
+                  <span>El primer repo que se abre en una maquina nueva es <code>csilvasantin/onboarding</code>, nunca el proyecto final directamente.</span>
+                </div>
+              </div>
+
+              <div class="setup-step">
+                <div class="setup-step-num">7</div>
+                <div>
+                  <strong>Pedir a la IA “haz onboarding”</strong>
+                  <span>Con eso la IA ya carga el contexto de Admira Next antes de tocar otros repos o automatizaciones.</span>
+                </div>
+              </div>
+
+              <div class="setup-step">
+                <div class="setup-step-num">8</div>
+                <div>
+                  <strong>Instalar Python y ejecutar el setup de bots</strong>
+                  <span>En Mac nuevo, necesitamos Python 3.11+ y luego ejecutar <code>./setup_admira_next_bots_mac.sh</code> desde onboarding.</span>
+                </div>
+              </div>
+
+              <div class="setup-step">
+                <div class="setup-step-num">9</div>
+                <div>
+                  <strong>Dar permiso de Accesibilidad</strong>
+                  <span>Ve a <code>Ajustes del Sistema &gt; Privacidad y seguridad &gt; Accesibilidad</code> y añade Terminal o iTerm. Sin esto, ClaudeBot y CodexBot no pueden actuar.</span>
+                </div>
+              </div>
+
+              <div class="setup-step">
+                <div class="setup-step-num">10</div>
+                <div>
+                  <strong>Dar permiso de Grabacion de pantalla y validar</strong>
+                  <span>Ve a <code>Ajustes del Sistema &gt; Privacidad y seguridad &gt; Grabacion de pantalla</code> y añade Terminal o iTerm. Despues, comprueba Tailscale, SSH, GitHub, ClaudeBot y CodexBot. Si macOS pide permisos extra de automatizacion al primer uso, aceptalos.</span>
+                </div>
               </div>
             </div>
           </section>
