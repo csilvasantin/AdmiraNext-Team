@@ -1,6 +1,6 @@
 {
   "team": "AdmiraNext Team",
-  "updatedAt": "2026-03-31T18:05:00Z",
+  "updatedAt": "2026-03-31T18:48:00Z",
   "tailnet": "tail48b61c.ts.net",
   "machines": [
     {
@@ -255,6 +255,35 @@
         "host": "",
         "ip_tailscale": "",
         "connect_tailscale": ""
+      }
+    },
+    {
+      "id": "admira-pcsitges3monitores",
+      "unitType": "worker",
+      "agentProfile": "operations-desk",
+      "capabilities": [
+        "browser-automation",
+        "reporting",
+        "multi-monitor"
+      ],
+      "color": "grafito",
+      "member": "PCSitges3Monitores",
+      "role": "Agente operativo de Sitges",
+      "name": "PC Sitges 3 Monitores",
+      "machineRole": "Worker de operacion continua",
+      "location": "Sitges",
+      "platform": "Windows",
+      "status": "offline",
+      "lastSeen": "2026-03-31T18:48:00Z",
+      "currentFocus": "Pendiente de conexion real al hub para tareas rutinarias desde puesto multi-monitor",
+      "note": "Primer worker real identificado para Sitges. Host previsto: pcsitges3monitores.tail48b61c.ts.net. Aun no resuelve desde esta sesion.",
+      "ssh": {
+        "enabled": false,
+        "user": "csilvasantin",
+        "host": "pcsitges3monitores.tail48b61c.ts.net",
+        "ip_tailscale": "",
+        "connect_tailscale": "ssh csilvasantin@pcsitges3monitores.tail48b61c.ts.net",
+        "hostAlias": "pcsitges3monitores"
       }
     }
   ]
