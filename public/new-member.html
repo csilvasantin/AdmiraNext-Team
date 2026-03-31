@@ -736,7 +736,7 @@
             <div class="tip-list">
               <div>
                 <strong>Si quieres delegarlo casi todo</strong>
-                <span>En Terminal ejecuta <code>sudo systemsetup -setremotelogin on</code>, <code>sudo pmset -c sleep 240</code>, <code>sudo pmset -b sleep 60</code> y <code>ipconfig getifaddr en0</code>. La IA tambien dejara activadas las autoactualizaciones menores y de seguridad. Usa el usuario <code>csilvasantin</code> y comparte la IP local del Mac.</span>
+                <span>En Terminal ejecuta <code>sudo systemsetup -setremotelogin on</code>, <code>sudo pmset -c sleep 240</code>, <code>sudo pmset -b sleep 60</code> y <code>ipconfig getifaddr en0</code>. La IA tambien dejara activadas las autoactualizaciones menores y de seguridad y te llevara al punto donde solo falte dar permisos, incluida la grabacion de pantalla obligatoria. Usa el usuario <code>csilvasantin</code> y comparte la IP local del Mac.</span>
               </div>
               <div>
                 <strong>No hace falta esperar a tenerlo todo</strong>
@@ -834,7 +834,7 @@
                 <div class="setup-step-num">10</div>
                 <div>
                   <strong>Dar permisos y validar</strong>
-                  <span>Ve a <code>Ajustes del Sistema &gt; Privacidad y seguridad &gt; Accesibilidad</code> y <code>Grabacion de pantalla</code>, añade Terminal o iTerm y acepta cualquier permiso extra de automatizacion. Despues, comprueba Chrome por defecto, Tailscale, SSH, GitHub, Claude, Codex, ClaudeBot y CodexBot.</span>
+                  <span>Ve a <code>Ajustes del Sistema &gt; Privacidad y seguridad &gt; Accesibilidad</code> y <code>Grabacion de pantalla</code>, añade Terminal o iTerm y acepta cualquier permiso extra de automatizacion. La grabacion de pantalla es un requisito obligatorio en todos los equipos de AdmiraNext. Despues, comprueba Chrome por defecto, Tailscale, SSH, GitHub, Claude, Codex, ClaudeBot y CodexBot.</span>
                 </div>
               </div>
             </div>
@@ -850,7 +850,7 @@
               <span class="mini-pill ok">fuerza Claude y Codex como paso obligatorio</span>
               <span class="mini-pill ok">pone Chrome por defecto</span>
               <span class="mini-pill warn">requiere login manual en GitHub, Tailscale, Claude y Codex</span>
-              <span class="mini-pill warn">requiere permisos de Accesibilidad y Grabacion</span>
+              <span class="mini-pill warn">requiere Accesibilidad y Grabacion obligatoria</span>
             </div>
 
             <pre id="bootstrapPreview" class="bootstrap-preview">#!/bin/zsh
