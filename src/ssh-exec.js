@@ -1,8 +1,10 @@
 import { execFile } from "node:child_process";
 import { readFile, unlink } from "node:fs/promises";
-import { hostname, tmpdir } from "node:os";
+import { hostname, homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { readMachines } from "./store.js";
+
+const SSH_IDENTITY = join(homedir(), ".ssh", "admiranext_ed25519");
 
 const LOCAL_HOSTNAME = hostname().replace(/\.local$/, "").toLowerCase();
 
@@ -55,7 +57,7 @@ function deriveLocalHostname(machine) {
 }
 
 function buildSshArgs(machine, useLocal) {
-  const args = ["-o", "ConnectTimeout=5", "-o", "BatchMode=yes"];
+  const args = ["-i", SSH_IDENTITY, "-o", "ConnectTimeout=5", "-o", "BatchMode=yes"];
 
   if (!useLocal) {
     const conn = machine.ssh.connect_tailscale || "";
@@ -75,7 +77,7 @@ function buildSshArgs(machine, useLocal) {
 }
 
 function buildScpArgs(machine, useLocal) {
-  const args = ["-o", "ConnectTimeout=5", "-o", "BatchMode=yes"];
+  const args = ["-i", SSH_IDENTITY, "-o", "ConnectTimeout=5", "-o", "BatchMode=yes"];
 
   if (!useLocal) {
     const conn = machine.ssh.connect_tailscale || "";
@@ -290,7 +292,7 @@ function sendKeystroke(machine, useLocal, appName) {
   }
 
   return new Promise((resolve) => {
-    const sshArgs = ["-o", "ConnectTimeout=3", "-o", "BatchMode=yes"];
+    const sshArgs = ["-i", SSH_IDENTITY, "-o", "ConnectTimeout=3", "-o", "BatchMode=yes"];
 
     if (!useLocal) {
       const conn = machine.ssh.connect_tailscale || "";
@@ -517,15 +519,13 @@ async function captureDesktopScreenshot(machine) {
     });
   }
 
-  // Remote: captura + base64 en el equipo remoto, decode aquí — sin SCP, sin disco local
+  // Remote: captura con Python/Quartz + base64 en el equipo remoto, decode aquí — sin SCP, sin disco local
   function attempt(useLocal) {
     return new Promise((resolve_) => {
       const sshArgs = buildSshArgs(machine, useLocal);
       sshArgs.push(
-        `osascript -e 'tell application "System Events" to key code 20 using {command down, shift down, control down}' -e 'delay 1' -e 'set png to the clipboard as «class PNGf»' -e 'set f to open for access POSIX file "/tmp/tw_screen_raw.png" with write permission' -e 'write png to f' -e 'close access f' ` +
-        `&& sips -Z 960 -s format jpeg /tmp/tw_screen_raw.png --out /tmp/tw_screen.jpg >/dev/null 2>&1 ` +
-        `&& rm -f /tmp/tw_screen_raw.png ` +
-        `&& base64 /tmp/tw_screen.jpg && rm -f /tmp/tw_screen.jpg`
+        PYTHON_CAPTURE_REMOTE +
+        ` && base64 -i /tmp/tw_screen.jpg && rm -f /tmp/tw_screen.jpg`
       );
       execFile("ssh", sshArgs, { timeout: 20_000 }, (err, stdout) => {
         const b64 = stdout?.trim();

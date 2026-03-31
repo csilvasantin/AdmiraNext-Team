@@ -7,7 +7,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <link rel="stylesheet" href="./styles.css?v=20260328-1">
+    <link rel="stylesheet" href="./styles.css?v=20260330-1">
     <style>
       .tw-nav { margin-top: 14px; text-align: right; }
       .tw-nav a { color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 600; }
@@ -59,6 +59,13 @@
         padding: 12px 14px;
         font: inherit;
       }
+      #sendAllTarget {
+        background: linear-gradient(135deg, #d63031, #c0392b);
+        color: white;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+      }
 
       .tw-textarea { resize: vertical; min-height: 44px; }
 
@@ -66,7 +73,7 @@
         padding: 12px 28px;
         border-radius: 14px;
         border: none;
-        background: var(--ink);
+        background: linear-gradient(135deg, #0984e3, #2471a3);
         color: white;
         font: inherit;
         font-weight: 600;
@@ -217,11 +224,11 @@
       .tw-approve-btn:disabled { opacity: 0.5; cursor: default; }
 
       .tw-approve-claude {
-        background: linear-gradient(135deg, #d4a574, #c4956a);
+        background: linear-gradient(135deg, #d63031, #c0392b);
         color: white;
       }
       .tw-approve-codex {
-        background: linear-gradient(135deg, #4a7c59, #3a6349);
+        background: linear-gradient(135deg, #0984e3, #2471a3);
         color: white;
       }
 
@@ -291,8 +298,8 @@
         padding: 1px 5px; border-radius: 4px; color: white;
         line-height: 14px; cursor: default;
       }
-      .tw-app-tag.claude { background: #c9944a; }
-      .tw-app-tag.codex { background: #2d6a4f; }
+      .tw-app-tag.claude { background: #d63031; }
+      .tw-app-tag.codex { background: #0984e3; }
 
       .tw-machines-approve {
         margin-top: 18px;
@@ -387,6 +394,43 @@
         color: #5f7469;
       }
       .tw-machine-monitor.small .tw-machine-monitor-time { font-size: 5px; }
+      .tw-multi-monitor {
+        display: flex;
+        height: 100%;
+        gap: 1px;
+        background: #000;
+        align-items: center;
+      }
+      .tw-multi-screen {
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+        height: 100%;
+      }
+      /* Studio Display — landscape, shorter — creates the H crossbar */
+      .tw-multi-screen.landscape {
+        height: 55%;
+        border-radius: 2px;
+      }
+      .tw-multi-screen img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .tw-screen-label {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 4px;
+        color: rgba(255,255,255,0.8);
+        background: rgba(0,0,0,0.45);
+        padding: 1px 0;
+        font-family: "SF Mono", monospace;
+        letter-spacing: 0.3px;
+      }
       .tw-machine-row { position: relative; }
 
       .tw-machine-input {
@@ -404,7 +448,7 @@
         padding: 8px 14px;
         border-radius: 10px;
         border: none;
-        background: var(--ink);
+        background: linear-gradient(135deg, #0984e3, #2471a3);
         color: white;
         font: inherit;
         font-size: 12px;
@@ -419,7 +463,7 @@
         padding: 8px 14px;
         border-radius: 10px;
         border: none;
-        background: #d4a574;
+        background: #d63031;
         color: white;
         font: inherit;
         font-size: 12px;
@@ -493,8 +537,8 @@
       }
       .tw-approve-sm:hover { opacity: 0.88; }
       .tw-approve-sm:disabled { opacity: 0.5; cursor: default; }
-      .tw-approve-sm.claude { background: #d4a574; color: white; }
-      .tw-approve-sm.codex { background: #4a7c59; color: white; }
+      .tw-approve-sm.claude { background: #d63031; color: white; }
+      .tw-approve-sm.codex { background: #0984e3; color: white; }
 
       .tw-empty { color: var(--muted); font-size: 14px; }
 
@@ -528,21 +572,101 @@
       .tw-machine-row { border-color: rgba(0,255,70,0.08) !important; }
       .tw-auto-badge { background: rgba(0,255,70,0.1) !important; color: #00ff46 !important; }
       .tw-watchdog-section { color: #5a9a6a; }
+
+      .hero-inner {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 24px;
+        align-items: center;
+      }
+      .hero-text { min-width: 0; }
+      .hero-pills {
+        flex-shrink: 0;
+        width: 260px;
+        border-radius: 16px;
+        overflow: visible;
+        position: relative;
+        margin-top: -20px;
+      }
+      .hero-pills img {
+        width: 100%;
+        display: block;
+        border-radius: 16px;
+        filter: saturate(0.7) brightness(0.75) hue-rotate(80deg);
+        mix-blend-mode: lighten;
+        overflow: hidden;
+      }
+      .hero-pills::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(0,255,70,0.08) 0%, rgba(0,0,0,0.4) 100%);
+        pointer-events: none;
+      }
+      .pill-glow {
+        position: absolute;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 2;
+        mix-blend-mode: screen;
+      }
+      .pill-glow-red {
+        width: 90px; height: 90px;
+        left: 8%; top: 38%;
+        background: radial-gradient(circle, rgba(214,48,49,0.95) 0%, rgba(214,48,49,0.3) 45%, transparent 70%);
+        animation: pillPulseRed 2.2s ease-in-out infinite alternate;
+      }
+      .pill-glow-blue {
+        width: 90px; height: 90px;
+        right: 8%; top: 38%;
+        background: radial-gradient(circle, rgba(9,132,227,0.95) 0%, rgba(9,132,227,0.3) 45%, transparent 70%);
+        animation: pillPulseBlue 2.2s ease-in-out infinite alternate-reverse;
+      }
+      @keyframes pillPulseRed {
+        from { opacity: 0.35; transform: scale(0.85); }
+        to   { opacity: 1;    transform: scale(1.2);  }
+      }
+      @keyframes pillPulseBlue {
+        from { opacity: 0.35; transform: scale(0.85); }
+        to   { opacity: 1;    transform: scale(1.2);  }
+      }
+      @media (max-width: 600px) {
+        .hero-pills { display: none; }
+      }
     </style>
   </head>
   <body>
-    <canvas id="matrixCanvas"></canvas>
-    <main class="app">
+    <div id="gate" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0a0a0a;">
+      <form id="gateForm" style="text-align:center;color:#ccc;font-family:system-ui;">
+        <h2 style="margin-bottom:12px;">AdmiraNext Control</h2>
+        <input id="gateKey" type="password" placeholder="Clave de acceso" autofocus
+          style="padding:10px 16px;border-radius:10px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:16px;width:220px;">
+        <button type="submit" style="margin-left:8px;padding:10px 18px;border-radius:10px;border:none;background:#34d399;color:#000;font-weight:600;cursor:pointer;">Entrar</button>
+        <p id="gateError" style="color:#f87171;margin-top:8px;display:none;">Clave incorrecta</p>
+      </form>
+    </div>
+    <canvas id="matrixCanvas" style="display:none;"></canvas>
+    <main class="app" style="display:none;">
       <header class="hero">
-        <p class="eyebrow">Control remoto — v1.9.3</p>
-        <h1>AdmiraNext Control</h1>
-        <p class="subtitle">Envía prompts y aprueba acciones en Claude y Codex de todos los equipos de Admira Next.</p>
-        <nav class="tw-nav"><a href="./index.html">Volver al dashboard</a></nav>
+        <div class="hero-inner">
+          <div class="hero-text">
+            <p class="eyebrow">Control remoto — v2.1.9</p>
+            <h1>AdmiraNext Control</h1>
+            <p class="subtitle">Envía prompts y aprueba acciones en Claude y Codex de todos los equipos de Admira Next.</p>
+          </div>
+          <div class="hero-pills">
+            <div class="pill-glow pill-glow-red"></div>
+            <div class="pill-glow pill-glow-blue"></div>
+            <img src="./matrix-pills.jpg" alt="Red pill or blue pill?" draggable="false">
+            <nav class="tw-nav" style="margin-top:10px;text-align:center;"><a href="./new-member.html">Alta nueva</a> · <a href="./index.html">Volver al dashboard</a></nav>
+          </div>
+        </div>
       </header>
 
       <section class="tw-panel">
         <div class="tw-command">
-          <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;">
+          <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;">
             <input class="tw-quick" id="quickInput" type="text"
                    placeholder="Escribe un prompt para todos los equipos..."
                    autocomplete="off" autofocus>
@@ -553,23 +677,25 @@
               <option value="terminal">Solo Terminal</option>
             </select>
             <button class="tw-send" id="sendAllBtn" style="height:100%;">Enviar a todos</button>
+            <button class="tw-send" id="onboardingAllBtn" style="height:100%;background:#1f8f63;">Onboarding all</button>
           </div>
+          <p style="margin:10px 0 0;color:var(--muted);font-size:12px;">`onboarding` es local para esta sesion. `onboarding all` refresca todos los equipos alcanzables usando una sola IA por maquina.</p>
         </div>
         <div class="tw-feedback" id="feedback"></div>
       </section>
 
       <section class="tw-approve-section">
         <div class="tw-approve-card">
-          <h3>Claude</h3>
-          <p>Aprobar en todos los equipos</p>
-          <button class="tw-approve-btn tw-approve-claude" id="approveClaudeBtn">Aprobar Claude</button>
-          <div class="tw-approve-result" id="approveClaudeResult"></div>
-        </div>
-        <div class="tw-approve-card">
           <h3>Codex</h3>
           <p>Aprobar en todos los equipos</p>
           <button class="tw-approve-btn tw-approve-codex" id="approveCodexBtn">Aprobar Codex</button>
           <div class="tw-approve-result" id="approveCodexResult"></div>
+        </div>
+        <div class="tw-approve-card">
+          <h3>Claude</h3>
+          <p>Aprobar en todos los equipos</p>
+          <button class="tw-approve-btn tw-approve-claude" id="approveClaudeBtn">Aprobar Claude</button>
+          <div class="tw-approve-result" id="approveClaudeResult"></div>
         </div>
       </section>
 
@@ -596,10 +722,22 @@
     </main>
 
     <footer style="text-align:center;padding:24px 0 8px;color:var(--muted);font-size:12px;">
-      AdmiraNext Control v1.9.3 — 2026-03-28
+      AdmiraNext Control v1.10.0 — 2026-03-30
     </footer>
 
-    <script src="./teamwork.js?v=20260328-8" type="module"></script>
+    <script>
+      document.getElementById("gateForm").addEventListener("submit", function(e) {
+        e.preventDefault();
+        if (document.getElementById("gateKey").value === "Nomeacuerd0") {
+          document.getElementById("gate").style.display = "none";
+          document.getElementById("matrixCanvas").style.display = "";
+          document.querySelector(".app").style.display = "";
+        } else {
+          document.getElementById("gateError").style.display = "block";
+        }
+      });
+    </script>
+    <script src="./teamwork.js?v=20260331-1" type="module"></script>
     <script>
       (function() {
         const c = document.getElementById("matrixCanvas");
@@ -683,6 +821,64 @@
           }
         }
         setInterval(draw, 45);
+      })();
+    </script>
+    <script>
+      // Matrix glitch effect on subtitle text — zero layout shift
+      (function () {
+        const CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        function initMatrixGlitch(el) {
+          const original = el.textContent;
+          el.textContent = '';
+
+          // Spaces render as plain text nodes — no wrapper, no collapse.
+          // Non-space chars get a relative wrapper + absolute glitch overlay.
+          const chars = original.split('').map((ch) => {
+            if (ch === ' ') {
+              el.appendChild(document.createTextNode('\u00a0'));
+              return null; // not eligible for glitch
+            }
+            const wrapper = document.createElement('span');
+            wrapper.style.cssText = 'position:relative;display:inline-block;';
+
+            const real = document.createElement('span');
+            real.textContent = ch;
+
+            const glitch = document.createElement('span');
+            glitch.textContent = ch;
+            glitch.style.cssText = 'position:absolute;left:0;top:0;width:100%;text-align:center;opacity:0;color:#00ff41;text-shadow:0 0 6px #00ff41;pointer-events:none;';
+
+            wrapper.appendChild(real);
+            wrapper.appendChild(glitch);
+            el.appendChild(wrapper);
+            return { real, glitch, ch };
+          }).filter(Boolean);
+
+          function glitchNext() {
+            const eligible = chars.filter((c) => c.ch.trim() !== '');
+            const count = Math.floor(Math.random() * 3) + 1;
+            for (let i = 0; i < count; i++) {
+              const c = eligible[Math.floor(Math.random() * eligible.length)];
+              let iter = 0;
+              const total = Math.floor(Math.random() * 7) + 4;
+              const tid = setInterval(() => {
+                c.glitch.textContent = CHARS[Math.floor(Math.random() * CHARS.length)];
+                c.glitch.style.opacity = Math.random() > 0.25 ? '1' : '0.3';
+                c.real.style.opacity = '0';
+                if (++iter >= total) {
+                  clearInterval(tid);
+                  c.glitch.style.opacity = '0';
+                  c.real.style.opacity = '';
+                }
+              }, 55);
+            }
+            setTimeout(glitchNext, Math.random() * 1800 + 400);
+          }
+          glitchNext();
+        }
+
+        const subtitle = document.querySelector('.subtitle');
+        if (subtitle) initMatrixGlitch(subtitle);
       })();
     </script>
   </body>
