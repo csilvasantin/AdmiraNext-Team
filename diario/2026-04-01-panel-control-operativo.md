@@ -23,4 +23,5 @@ AdmiraNext Team
 - Los desplegables de `Consejo` y `Equipo` se abren ahora cuando existe al menos una maquina activa en ese grupo, y se quedan cerrados si no hay actividad.
 - Los Macs accesibles por SSH ya no caen como `desconectados` cuando falla la sesion grafica remota: el backend conserva una tarjeta viva con el estado `SSH activo — sin sesion grafica`.
 - En local quedan ya validados tres Macs visibles en el panel: `Mac Mini`, `MacBook Pro Negro 14` y `MacBook Air Blanco`.
+- Cuando el nodo de control corre en background sin sesion grafica local, la propia maquina ya conserva un fallback visible (`Local activo — sin sesion grafica`) en lugar de quedarse sin tarjeta util.
 - La publicacion publica y la local vuelven a estar alineadas en rutas y recursos.

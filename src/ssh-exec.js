@@ -794,7 +794,10 @@ $title = New-Object System.Text.StringBuilder 1024
   }
   if (isLocalMachine(machine)) {
     const { error, stdout } = await execLocal(script);
-    return error ? null : stdout?.trim() || null;
+    if (!error && stdout?.trim()) {
+      return stdout.trim();
+    }
+    return "Local activo — sin sesion grafica";
   }
 
   const remoteCmd = `osascript -e 'tell application "System Events"' -e 'set frontApp to name of first process whose frontmost is true' -e 'try' -e 'set winName to name of front window of first process whose frontmost is true' -e 'on error' -e 'set winName to "sin ventana"' -e 'end try' -e 'return frontApp & " — " & winName' -e 'end tell'`;
