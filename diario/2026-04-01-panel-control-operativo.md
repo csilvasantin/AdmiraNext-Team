@@ -21,4 +21,6 @@ AdmiraNext Team
 - El panel deja de usar `offline` como cajon de sastre: ahora diferencia `estado del equipo`, `preview` y `canal remoto`, para no confundir equipos activos sin snapshot o sin canal con maquinas realmente caidas.
 - El cliente vuelve a refrescar maquinas, snapshots y watchdog en bucle, de forma que los previos online no se quedan congelados tras la carga inicial.
 - Los desplegables de `Consejo` y `Equipo` se abren ahora cuando existe al menos una maquina activa en ese grupo, y se quedan cerrados si no hay actividad.
+- Los Macs accesibles por SSH ya no caen como `desconectados` cuando falla la sesion grafica remota: el backend conserva una tarjeta viva con el estado `SSH activo — sin sesion grafica`.
+- En local quedan ya validados tres Macs visibles en el panel: `Mac Mini`, `MacBook Pro Negro 14` y `MacBook Air Blanco`.
 - La publicacion publica y la local vuelven a estar alineadas en rutas y recursos.

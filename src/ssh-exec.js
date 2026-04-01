@@ -809,11 +809,29 @@ $title = New-Object System.Text.StringBuilder 1024
     });
   }
 
+  function attemptReachableFallback(useLocal) {
+    return new Promise((resolve_) => {
+      const sshArgs = buildSshArgs(machine, useLocal);
+      sshArgs.push("printf 'SSH activo — sin sesion grafica'");
+      execFile("ssh", sshArgs, { timeout: 8_000 }, (error, stdout) => {
+        resolve_(error ? null : stdout?.trim() || null);
+      });
+    });
+  }
+
   if (deriveLocalHostname(machine)) {
     const r = await attempt(true);
     if (r) return r;
   }
-  return attempt(false);
+  const remote = await attempt(false);
+  if (remote) return remote;
+
+  if (deriveLocalHostname(machine)) {
+    const localReachable = await attemptReachableFallback(true);
+    if (localReachable) return localReachable;
+  }
+
+  return attemptReachableFallback(false);
 }
 
 // Capture all 3 displays of local Mac Mini in visual order: left→center→right
