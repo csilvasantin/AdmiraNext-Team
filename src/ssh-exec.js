@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { readFile, unlink } from "node:fs/promises";
+import { readFile, unlink, writeFile } from "node:fs/promises";
 import { hostname, homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { readMachines } from "./store.js";
@@ -12,12 +12,122 @@ const IS_WINDOWS = process.platform === "win32";
 
 const TIMEOUT_MS = 15_000;
 const CAPTURE_DELAY_MS = 4000;
+const REMOTE_GUI_AGENT_CACHE_MS = 10_000;
+const LOCAL_MULTI_DISPLAY_MACHINE_IDS = new Set(["admira-macmini"]);
+const APPROVAL_SOUND_PATHS = {
+  claude: join(tmpdir(), "admira_next_claude_approve.wav"),
+  codex: join(tmpdir(), "admira_next_codex_approve.wav")
+};
 
 // In-memory image store: machineId/captureId → Buffer
 const imageBuffers = new Map();
+const remoteGuiAgentAvailability = new Map();
+const approvalSoundReadyPromises = new Map();
 
 export function getImageBuffer(id) {
   return imageBuffers.get(id) || null;
+}
+
+function shouldTryRemoteGuiAgent(machineId) {
+  const cached = remoteGuiAgentAvailability.get(machineId);
+  if (!cached) return true;
+  if (cached.available) return true;
+  return (Date.now() - cached.checkedAt) > REMOTE_GUI_AGENT_CACHE_MS;
+}
+
+function noteRemoteGuiAgent(machineId, available) {
+  remoteGuiAgentAvailability.set(machineId, { available, checkedAt: Date.now() });
+}
+
+function createWavBuffer(sequence, sampleRate = 22050) {
+  const totalSamples = sequence.reduce((sum, part) => sum + Math.max(1, Math.floor((part.ms / 1000) * sampleRate)), 0);
+  const pcm = Buffer.alloc(totalSamples * 2);
+  let sampleOffset = 0;
+
+  for (const part of sequence) {
+    const samples = Math.max(1, Math.floor((part.ms / 1000) * sampleRate));
+    const startFreq = part.freq ?? 0;
+    const endFreq = part.endFreq ?? startFreq;
+    const volume = part.volume ?? 0.4;
+    const attack = Math.max(1, Math.floor(samples * 0.1));
+    const release = Math.max(1, Math.floor(samples * 0.18));
+
+    for (let i = 0; i < samples; i++) {
+      const progress = samples <= 1 ? 1 : i / (samples - 1);
+      const freq = startFreq + ((endFreq - startFreq) * progress);
+      let amplitude = 0;
+
+      if (freq > 0) {
+        const time = i / sampleRate;
+        const angle = 2 * Math.PI * freq * time;
+        const square = Math.sign(Math.sin(angle));
+        const sine = Math.sin(angle * 2);
+        const envelopeIn = Math.min(1, i / attack);
+        const envelopeOut = Math.min(1, (samples - i) / release);
+        const envelope = Math.min(envelopeIn, envelopeOut);
+        amplitude = (square * 0.72 + sine * 0.28) * envelope * volume;
+      }
+
+      const clamped = Math.max(-1, Math.min(1, amplitude));
+      pcm.writeInt16LE(Math.round(clamped * 32767), sampleOffset * 2);
+      sampleOffset++;
+    }
+  }
+
+  const header = Buffer.alloc(44);
+  const byteRate = sampleRate * 2;
+  header.write("RIFF", 0);
+  header.writeUInt32LE(36 + pcm.length, 4);
+  header.write("WAVE", 8);
+  header.write("fmt ", 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(1, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(2, 32);
+  header.writeUInt16LE(16, 34);
+  header.write("data", 36);
+  header.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([header, pcm]);
+}
+
+function buildApprovalSoundBuffer(kind = "claude") {
+  if (kind === "codex") {
+    // Sharper, more digital triad for Codex approvals.
+    return createWavBuffer([
+      { freq: 987.77, endFreq: 1174.66, ms: 70, volume: 0.33 },
+      { freq: 0, ms: 16, volume: 0 },
+      { freq: 1479.98, endFreq: 1661.22, ms: 76, volume: 0.31 },
+      { freq: 0, ms: 14, volume: 0 },
+      { freq: 1975.53, endFreq: 2349.32, ms: 124, volume: 0.29 }
+    ]);
+  }
+
+  // Coin-like arpeggio for Claude / Claude Code approvals.
+  return createWavBuffer([
+    { freq: 1318.51, endFreq: 1480.0, ms: 68, volume: 0.34 },
+    { freq: 0, ms: 18, volume: 0 },
+    { freq: 1661.22, endFreq: 1864.66, ms: 82, volume: 0.32 },
+    { freq: 0, ms: 16, volume: 0 },
+    { freq: 2093.0, endFreq: 2637.02, ms: 118, volume: 0.28 }
+  ]);
+}
+
+function normalizeApprovalSoundKind(target = "") {
+  return String(target || "").includes("codex") ? "codex" : "claude";
+}
+
+function ensureApprovalSoundPath(kind = "claude") {
+  const normalizedKind = normalizeApprovalSoundKind(kind);
+  if (!approvalSoundReadyPromises.has(normalizedKind)) {
+    const soundPath = APPROVAL_SOUND_PATHS[normalizedKind] || APPROVAL_SOUND_PATHS.claude;
+    const promise = writeFile(soundPath, buildApprovalSoundBuffer(normalizedKind))
+      .then(() => soundPath)
+      .catch(() => null);
+    approvalSoundReadyPromises.set(normalizedKind, promise);
+  }
+  return approvalSoundReadyPromises.get(normalizedKind);
 }
 
 function isLocalMachine(machine) {
@@ -35,6 +145,10 @@ function isLocalWindowsMachine(machine) {
 
 function isLocalMacMachine(machine) {
   return !IS_WINDOWS && isLocalMachine(machine);
+}
+
+function isLocalMultiDisplayMachine(machine) {
+  return isLocalMacMachine(machine) && LOCAL_MULTI_DISPLAY_MACHINE_IDS.has(machine?.id);
 }
 
 function hasWindowsAutomationChannel(machine) {
@@ -227,17 +341,51 @@ function sanitizePrompt(text) {
     .slice(0, 2000);
 }
 
-function deriveLocalHostname(machine) {
-  const host = machine.ssh.host || "";
-  const dot = host.indexOf(".");
-  if (dot > 0) {
-    return host.slice(0, dot) + ".local";
+function isIpv4Address(value) {
+  return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(String(value || "").trim());
+}
+
+function normalizeLanTarget(value) {
+  const trimmed = String(value || "").trim().toLowerCase();
+  if (!trimmed) {
+    return "";
   }
-  return null;
+
+  if (isIpv4Address(trimmed) || trimmed.includes(".")) {
+    return trimmed;
+  }
+
+  return `${trimmed}.local`;
+}
+
+function getShortHost(machine) {
+  const host = String(machine.ssh?.host || "").trim().toLowerCase();
+  if (!host) {
+    return "";
+  }
+
+  return host.split(".")[0];
+}
+
+function getLanTargets(machine) {
+  const targets = [
+    machine.ssh?.ip_lan,
+    machine.ssh?.host_local,
+    machine.ssh?.hostAlias,
+    getShortHost(machine)
+  ]
+    .map(normalizeLanTarget)
+    .filter(Boolean);
+
+  return [...new Set(targets)];
+}
+
+function deriveLocalHostname(machine) {
+  return getLanTargets(machine)[0] || null;
 }
 
 function buildSshArgs(machine, useLocal) {
-  const args = ["-i", SSH_IDENTITY, "-o", "ConnectTimeout=5", "-o", "BatchMode=yes"];
+  const args = ["-i", SSH_IDENTITY, "-o", "ConnectTimeout=5", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=accept-new"];
 
   if (!useLocal) {
     const conn = machine.ssh.connect_tailscale || "";
@@ -257,7 +405,7 @@ function buildSshArgs(machine, useLocal) {
 }
 
 function buildScpArgs(machine, useLocal) {
-  const args = ["-i", SSH_IDENTITY, "-o", "ConnectTimeout=5", "-o", "BatchMode=yes"];
+  const args = ["-i", SSH_IDENTITY, "-o", "ConnectTimeout=5", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=accept-new"];
 
   if (!useLocal) {
     const conn = machine.ssh.connect_tailscale || "";
@@ -268,6 +416,98 @@ function buildScpArgs(machine, useLocal) {
   }
 
   return args;
+}
+
+function execRemote(machine, useLocal, command, timeout = TIMEOUT_MS, maxBuffer = 20 * 1024 * 1024) {
+  return new Promise((resolve) => {
+    const sshArgs = buildSshArgs(machine, useLocal);
+    sshArgs.push(command);
+    execFile("ssh", sshArgs, { timeout, maxBuffer }, (error, stdout) => {
+      resolve({ error, stdout: stdout?.trim() || "" });
+    });
+  });
+}
+
+async function captureFromRemoteGuiAgent(machine, useLocal) {
+  if (!shouldTryRemoteGuiAgent(machine.id)) {
+    return null;
+  }
+
+  const snapshotsResult = await execRemote(
+    machine,
+    useLocal,
+    "curl -fsS --max-time 8 http://127.0.0.1:3030/api/teamwork/snapshots",
+    12_000
+  );
+
+  if (snapshotsResult.error || !snapshotsResult.stdout) {
+    noteRemoteGuiAgent(machine.id, false);
+    return null;
+  }
+
+  let snapshotsData;
+  try {
+    snapshotsData = JSON.parse(snapshotsResult.stdout);
+  } catch {
+    noteRemoteGuiAgent(machine.id, false);
+    return null;
+  }
+
+  const snap = snapshotsData?.snapshots?.[machine.id];
+  const imagePath =
+    snap?.image ||
+    (Array.isArray(snap?.images) && snap.images.length > 0 ? snap.images[0] : null);
+
+  if (!imagePath) {
+    noteRemoteGuiAgent(machine.id, true);
+    return null;
+  }
+
+  const remoteTmp = `/tmp/admira_gui_${machine.id}_${Date.now()}.jpg`;
+  const fetchResult = await execRemote(
+    machine,
+    useLocal,
+    `curl -fsS --max-time 8 http://127.0.0.1:3030${imagePath} -o ${remoteTmp} && test -s ${remoteTmp} && printf OK`,
+    15_000,
+    30 * 1024 * 1024
+  );
+
+  if (fetchResult.error || !fetchResult.stdout.includes("OK")) {
+    noteRemoteGuiAgent(machine.id, false);
+    return null;
+  }
+
+  const localTmp = join(tmpdir(), `tw_remote_gui_${machine.id}_${Date.now()}.jpg`);
+  try {
+    const scpArgs = buildScpArgs(machine, useLocal);
+    const user = machine.ssh?.user || "csilvasantin";
+    const host = useLocal ? deriveLocalHostname(machine) : (machine.ssh?.ip_tailscale || machine.ssh?.host);
+    try {
+      await new Promise((resolve, reject) => {
+        execFile("scp", [...scpArgs, `${user}@${host}:${remoteTmp}`, localTmp], { timeout: 30_000 }, (error) => {
+          if (error) reject(error);
+          else resolve();
+        });
+      });
+    } catch {
+      // Some Macs finish copying the file but keep the SSH transport open too long.
+      // If the temp file is already readable, we still accept it below.
+    }
+
+    const buffer = await readFile(localTmp);
+    if (!buffer.length) {
+      noteRemoteGuiAgent(machine.id, false);
+      return null;
+    }
+    noteRemoteGuiAgent(machine.id, true);
+    return buffer;
+  } catch {
+    noteRemoteGuiAgent(machine.id, false);
+    return null;
+  } finally {
+    unlink(localTmp).catch(() => {});
+    execRemote(machine, useLocal, `rm -f ${remoteTmp}`, 5_000).catch(() => {});
+  }
 }
 
 // Try ScreenCaptureKit screenshot via Swift on remote machine
@@ -345,8 +585,12 @@ export function getCapture(captureId) {
 const TARGET_APPS = {
   terminal: "Terminal",
   claude: "Claude",
-  codex: "Codex"
+  codex: "Codex",
+  terminal_claude: "Terminal",
+  terminal_codex: "Terminal"
 };
+
+const TERMINAL_APP_CANDIDATES = ["Terminal", "iTerm2", "Warp", "Ghostty"];
 
 export async function sendPromptToMachine(machineId, prompt, target = "terminal") {
   const data = await readMachines();
@@ -428,13 +672,12 @@ export async function sendPromptToMachine(machineId, prompt, target = "terminal"
           }
         }
       } else {
-        try {
-          const buf = await captureScreenshot(machine, usedLocal);
+        const buf = await captureDesktopScreenshot(machine);
+        if (buf) {
           imageBuffers.set(captureId, buf);
           captures.set(captureId, { type: "image", path: `/api/screenshots/${captureId}` });
-        } catch {
-          // Fallback to text capture
-          const text = await captureTerminalText(machine, usedLocal, appName);
+        } else {
+          const text = await captureTextFallback(machine) || await captureTerminalText(machine, usedLocal, appName);
           if (text) {
             captures.set(captureId, { type: "text", text });
           }
@@ -456,15 +699,43 @@ function isReachable(machine) {
   return machineSnapshots.has(machine.id);
 }
 
+function listTerminalAppCandidates(preferredApp = "") {
+  const trimmed = String(preferredApp || "").trim();
+  const candidates = trimmed
+    ? [trimmed, ...TERMINAL_APP_CANDIDATES.filter((app) => app !== trimmed)]
+    : [...TERMINAL_APP_CANDIDATES];
+  return [...new Set(candidates)];
+}
+
+function buildTerminalActivateScript(preferredApp = "") {
+  const candidates = listTerminalAppCandidates(preferredApp);
+  const checks = candidates
+    .map((app) => `  if terminalApp is "" and exists process "${app}" then set terminalApp to "${app}"`)
+    .join("\n");
+  const activations = candidates
+    .map((app, index) => `${index === 0 ? "if" : "else if"} terminalApp is "${app}" then
+  tell application "${app}" to activate`)
+    .join("\n");
+
+  return `set terminalApp to ""
+tell application "System Events"
+${checks}
+end tell
+${activations}
+else
+  tell application "Terminal" to activate
+end if`;
+}
+
 // Build the osascript command for approval based on target app
-function buildApproveScript(appName) {
-  if (appName === "Claude") {
+function buildApproveScript(targetKey, preferredTerminalApp = "") {
+  if (targetKey === "claude") {
     // Claude: activa la app y envía Ctrl+Enter — macOS da foco al diálogo modal automáticamente
     return `tell application "Claude" to activate
 delay 0.4
 tell application "System Events" to key code 36 using control down`;
   }
-  if (appName === "Codex") {
+  if (targetKey === "codex") {
     // Codex: send "2" + Enter to approve
     return `tell application "Codex" to activate
 delay 0.3
@@ -474,19 +745,32 @@ tell application "System Events"
   key code 36
 end tell`;
   }
-  // Terminal fallback
-  return `tell application "Terminal" to activate
+  if (targetKey === "terminal_codex") {
+    return `${buildTerminalActivateScript(preferredTerminalApp)}
+delay 0.3
+tell application "System Events"
+  keystroke "2"
+  delay 0.2
+  key code 36
+end tell`;
+  }
+  // Terminal / Claude Code fallback
+  return `${buildTerminalActivateScript(preferredTerminalApp)}
 delay 0.3
 tell application "System Events" to key code 36 using control down`;
 }
 
-function sendKeystroke(machine, useLocal, appName) {
-  const targetKey = Object.entries(TARGET_APPS).find(([, value]) => value === appName)?.[0] || "terminal";
-  const script = buildApproveScript(appName);
+function sendKeystroke(machine, useLocal, targetKey, preferredTerminalApp = "") {
+  const normalizedTarget = TARGET_APPS[targetKey] ? targetKey : "terminal";
+  const script = buildApproveScript(normalizedTarget, preferredTerminalApp);
+  const windowsTarget =
+    normalizedTarget === "terminal_codex" ? "codex" :
+    normalizedTarget === "terminal_claude" ? "terminal" :
+    normalizedTarget;
 
   // Local machine: run directly
   if (hasWindowsAutomationChannel(machine)) {
-    return sendApproveToLocalWindows(targetKey).then((result) => ({
+    return sendApproveToLocalWindows(windowsTarget).then((result) => ({
       machine: machine.name, id: machine.id, ok: result.ok, error: result.error
     }));
   }
@@ -497,19 +781,7 @@ function sendKeystroke(machine, useLocal, appName) {
   }
 
   return new Promise((resolve) => {
-    const sshArgs = ["-i", SSH_IDENTITY, "-o", "ConnectTimeout=3", "-o", "BatchMode=yes"];
-
-    if (!useLocal) {
-      const conn = machine.ssh.connect_tailscale || "";
-      if (conn.includes("ProxyCommand")) {
-        const proxy = conn.match(/-o\s+'([^']+)'/)?.[1] || conn.match(/-o\s+"([^"]+)"/)?.[1];
-        if (proxy) sshArgs.push("-o", proxy);
-      }
-    }
-
-    const user = machine.ssh.user || "csilvasantin";
-    const host = useLocal ? deriveLocalHostname(machine) : (machine.ssh.ip_tailscale || machine.ssh.host);
-    sshArgs.push(`${user}@${host}`);
+    const sshArgs = buildSshArgs(machine, useLocal);
 
     // Build remote osascript command from script lines
     const remoteCmd = script.split("\n").map((l) => `-e '${l.trim()}'`).join(" ");
@@ -523,7 +795,7 @@ function sendKeystroke(machine, useLocal, appName) {
 
 export async function approveAll(target) {
   const data = await readMachines();
-  const appName = TARGET_APPS[target] || TARGET_APPS.claude;
+  const targetKey = TARGET_APPS[target] ? target : "claude";
 
   // ONLY send to reachable (online) machines — skip offline immediately
   const automationEnabled = data.machines.filter((m) => isAutomationReady(m));
@@ -534,10 +806,10 @@ export async function approveAll(target) {
     reachable.map(async (machine) => {
       // Try .local first (faster on LAN), then Tailscale
       if (deriveLocalHostname(machine) && !isLocalMachine(machine)) {
-        const r = await sendKeystroke(machine, true, appName);
+        const r = await sendKeystroke(machine, true, targetKey);
         if (r.ok) return r;
       }
-      return sendKeystroke(machine, false, appName);
+      return sendKeystroke(machine, false, targetKey);
     })
   );
 
@@ -552,7 +824,10 @@ export async function approveAll(target) {
   setTimeout(() => {
     Promise.allSettled(
       reachable.map((m) => captureOneSnapshot(m).then((snap) => {
-        if (snap) machineSnapshots.set(m.id, { ...snap, updatedAt: new Date().toISOString() });
+        if (snap) {
+          const existing = machineSnapshots.get(m.id) || {};
+          machineSnapshots.set(m.id, mergeMachineSnapshot(existing, snap));
+        }
       }))
     );
   }, 2000);
@@ -572,18 +847,18 @@ export async function approveMachine(machineId, target) {
     return { machine: machine.name, id: machine.id, ok: false, error: "offline" };
   }
 
-  const appName = TARGET_APPS[target] || TARGET_APPS.claude;
+  const targetKey = TARGET_APPS[target] ? target : "claude";
 
   let result;
   // Try .local first (faster)
   if (deriveLocalHostname(machine) && !isLocalMachine(machine)) {
-    result = await sendKeystroke(machine, true, appName);
+    result = await sendKeystroke(machine, true, targetKey);
     if (result.ok) {
       triggerPostApproveSnapshot(machine);
       return result;
     }
   }
-  result = await sendKeystroke(machine, false, appName);
+  result = await sendKeystroke(machine, false, targetKey);
 
   if (result.ok) {
     triggerPostApproveSnapshot(machine);
@@ -597,7 +872,8 @@ function triggerPostApproveSnapshot(machine) {
   setTimeout(async () => {
     const snap = await captureOneSnapshot(machine);
     if (snap) {
-      machineSnapshots.set(machine.id, { ...snap, updatedAt: new Date().toISOString() });
+      const existing = machineSnapshots.get(machine.id) || {};
+      machineSnapshots.set(machine.id, mergeMachineSnapshot(existing, snap));
     }
   }, 2000);
 }
@@ -620,6 +896,50 @@ export function getAllSnapshots() {
     result[id] = snap;
   }
   return result;
+}
+
+function hasVisualSnapshot(snap) {
+  return Boolean(
+    (snap?.type === "image" && snap.image) ||
+    (snap?.type === "images" && Array.isArray(snap.images) && snap.images.length > 0)
+  );
+}
+
+function hasSnapshotPayload(snap) {
+  return hasVisualSnapshot(snap) || Boolean(snap?.text);
+}
+
+function mergeMachineSnapshot(existing, incoming, extra = {}) {
+  const current = existing || {};
+  const merged = { ...current, ...extra };
+
+  if (!incoming) {
+    return hasSnapshotPayload(current) ? merged : { ...merged };
+  }
+
+  if (hasVisualSnapshot(incoming)) {
+    delete merged.text;
+    if (incoming.type === "image") {
+      delete merged.images;
+      delete merged.orientations;
+    }
+    if (incoming.type === "images") {
+      delete merged.image;
+    }
+    return { ...merged, ...incoming, updatedAt: new Date().toISOString() };
+  }
+
+  if (incoming.type === "text") {
+    if (hasVisualSnapshot(current)) {
+      return merged;
+    }
+    delete merged.image;
+    delete merged.images;
+    delete merged.orientations;
+    return { ...merged, ...incoming, updatedAt: new Date().toISOString() };
+  }
+
+  return merged;
 }
 
 function isActiveDesktopApp(state) {
@@ -692,36 +1012,48 @@ export async function sendOnboardingToAll(prompt) {
 const PYTHON_CAPTURE_REMOTE = `cat > /tmp/tw_snap.py << 'PYEOF'
 import Quartz.CoreGraphics as CG
 from AppKit import NSBitmapImageRep, NSJPEGFileType
+import sys
 i = CG.CGWindowListCreateImage(CG.CGRectInfinite, CG.kCGWindowListOptionOnScreenOnly, CG.kCGNullWindowID, CG.kCGWindowImageDefault)
 if i:
     r = NSBitmapImageRep.alloc().initWithCGImage_(i)
     d = r.representationUsingType_properties_(NSJPEGFileType, {})
     d.writeToFile_atomically_("/tmp/tw_screen.jpg", True)
-    print("OK")
 else:
-    print("FAIL")
+    sys.exit(1)
 PYEOF
-python3 /tmp/tw_snap.py 2>/dev/null && sips -Z 960 /tmp/tw_screen.jpg --out /tmp/tw_screen.jpg >/dev/null 2>&1`;
+PYTHON_BIN=""
+for candidate in python3 /opt/homebrew/bin/python3 /usr/local/bin/python3 /Library/Developer/CommandLineTools/usr/bin/python3; do
+  if [ -x "$candidate" ]; then
+    bin="$candidate"
+  elif command -v "$candidate" >/dev/null 2>&1; then
+    bin="$(command -v "$candidate")"
+  else
+    continue
+  fi
+
+  if "$bin" - <<'PYCHK' >/dev/null 2>&1
+import Quartz.CoreGraphics as CG
+from AppKit import NSBitmapImageRep, NSJPEGFileType
+PYCHK
+  then
+    PYTHON_BIN="$bin"
+    break
+  fi
+done
+
+if [ -z "$PYTHON_BIN" ]; then
+  rm -f /tmp/tw_snap.py
+  exit 1
+fi
+
+"$PYTHON_BIN" /tmp/tw_snap.py 2>/dev/null && sips -Z 960 /tmp/tw_screen.jpg --out /tmp/tw_screen.jpg >/dev/null 2>&1`;
 
 // Capture desktop screenshot for a machine, save locally
 // Returns a Buffer with the screenshot, or null — no disk writes ever
 async function captureDesktopScreenshot(machine) {
   if (isLocalMacMachine(machine)) {
-    // Local: captura display 2 (pantalla Claude, vertical izquierda)
-    // Escribe a /tmp, lee a buffer, borra el tmp
-    const tmpPath = join(tmpdir(), `tw_snap_${machine.id}_${Date.now()}.jpg`);
-    return new Promise((resolve_) => {
-      execFile("launchctl", ["asuser", String(process.getuid()), "screencapture", "-D", "2", "-x", "-t", "jpg", tmpPath], { timeout: 10_000 }, (err) => {
-        if (err) return resolve_(null);
-        execFile("sips", ["-Z", "960", tmpPath, "--out", tmpPath], { timeout: 5_000 }, async () => {
-          try {
-            const buf = await readFile(tmpPath);
-            resolve_(buf);
-          } catch { resolve_(null); }
-          finally { unlink(tmpPath).catch(() => {}); }
-        });
-      });
-    });
+    const preferredDisplay = isLocalMultiDisplayMachine(machine) ? 1 : null;
+    return captureLocalMacScreenshot(preferredDisplay, machine.id);
   }
   if (isLocalWindowsMachine(machine)) {
     const tmpPath = join(tmpdir(), `tw_snap_${machine.id}_${Date.now()}.jpg`);
@@ -760,9 +1092,14 @@ print("OK")
   }
 
   if (deriveLocalHostname(machine)) {
+    const guiAgent = await captureFromRemoteGuiAgent(machine, true);
+    if (guiAgent) return guiAgent;
     const r = await attempt(true);
     if (r) return r;
   }
+
+  const guiAgent = await captureFromRemoteGuiAgent(machine, false);
+  if (guiAgent) return guiAgent;
   return attempt(false);
 }
 
@@ -845,36 +1182,59 @@ const LOCAL_DISPLAYS = [
   { d: 3, key: "right",  orient: "portrait"  },  // Codex — ASUS derecha
 ];
 
+function captureLocalMacScreenshot(displayId = null, imageKey = `local-${Date.now()}`) {
+  const tmpPath = join(tmpdir(), `tw_snap_${imageKey}_${Date.now()}.jpg`);
+  const args = ["asuser", String(process.getuid()), "screencapture"];
+  if (displayId !== null && displayId !== undefined) {
+    args.push("-D", String(displayId));
+  }
+  args.push("-x", "-t", "jpg", tmpPath);
+
+  return new Promise((resolve_) => {
+    execFile("launchctl", args, { timeout: 10_000 }, (err) => {
+      if (err) return resolve_(null);
+      execFile("sips", ["-Z", "960", tmpPath, "--out", tmpPath], { timeout: 5_000 }, async () => {
+        try {
+          resolve_(await readFile(tmpPath));
+        } catch {
+          resolve_(null);
+        } finally {
+          unlink(tmpPath).catch(() => {});
+        }
+      });
+    });
+  });
+}
+
 async function captureLocalAllDisplays(machine) {
   return Promise.all(LOCAL_DISPLAYS.map(({ d }) => new Promise((resolve_) => {
-    const tmpPath = join(tmpdir(), `tw_snap_${machine.id}_d${d}_${Date.now()}.jpg`);
-    execFile("launchctl", ["asuser", String(process.getuid()), "screencapture", "-D", String(d), "-x", "-t", "jpg", tmpPath],
-      { timeout: 10_000 }, (err) => {
-        if (err) return resolve_(null);
-        execFile("sips", ["-Z", "960", tmpPath, "--out", tmpPath], { timeout: 5_000 }, async () => {
-          try { resolve_(await readFile(tmpPath)); }
-          catch { resolve_(null); }
-          finally { unlink(tmpPath).catch(() => {}); }
-        });
-      });
+    captureLocalMacScreenshot(d, `${machine.id}_d${d}`).then(resolve_);
   })));
 }
 
 async function captureOneSnapshot(machine) {
   if (isLocalMacMachine(machine)) {
-    const bufs = await captureLocalAllDisplays(machine);
-    const images = [];
-    const orientations = [];
-    for (let i = 0; i < LOCAL_DISPLAYS.length; i++) {
-      const { key, orient } = LOCAL_DISPLAYS[i];
-      const imgKey = `${machine.id}-${key}`;
-      if (bufs[i]) {
-        imageBuffers.set(imgKey, bufs[i]);
-        images.push(`/api/screenshots/${imgKey}`);
-        orientations.push(orient);
+    if (isLocalMultiDisplayMachine(machine)) {
+      const bufs = await captureLocalAllDisplays(machine);
+      const images = [];
+      const orientations = [];
+      for (let i = 0; i < LOCAL_DISPLAYS.length; i++) {
+        const { key, orient } = LOCAL_DISPLAYS[i];
+        const imgKey = `${machine.id}-${key}`;
+        if (bufs[i]) {
+          imageBuffers.set(imgKey, bufs[i]);
+          images.push(`/api/screenshots/${imgKey}`);
+          orientations.push(orient);
+        }
       }
+      if (images.length > 0) return { type: "images", images, orientations };
     }
-    if (images.length > 0) return { type: "images", images, orientations };
+
+    const buf = await captureLocalMacScreenshot(null, machine.id);
+    if (buf) {
+      imageBuffers.set(machine.id, buf);
+      return { type: "image", image: `/api/screenshots/${machine.id}` };
+    }
     const text = await captureTextFallback(machine);
     return text ? { type: "text", text } : null;
   }
@@ -905,7 +1265,7 @@ export async function refreshAllSnapshots() {
   await Promise.allSettled(
     sshEnabled.map(async (machine) => {
       // Skip recently-failed machines (retry every 2 min)
-      if (shouldSkipOffline(machine.id)) return;
+      if (shouldSkipOffline(machine)) return;
 
       // Capture screenshot + app states in parallel
       const [snap, appsRaw] = await Promise.all([
@@ -921,13 +1281,10 @@ export async function refreshAllSnapshots() {
 
       const apps = parseAppsState(appsRaw);
       const existing = machineSnapshots.get(machine.id) || {};
-      machineSnapshots.set(machine.id, {
-        ...existing,
-        ...(snap || {}),
+      machineSnapshots.set(machine.id, mergeMachineSnapshot(existing, snap, {
         claudeState: apps.claude,
-        codexState: apps.codex,
-        updatedAt: new Date().toISOString()
-      });
+        codexState: apps.codex
+      }));
     })
   );
 }
@@ -969,7 +1326,7 @@ const CLAUDE_IGNORE_BUTTONS = [
 // Codex CLI approval patterns (numbered options in terminal)
 const CODEX_APPROVAL_PATTERNS = [
   /approve/i, /allow/i, /permitir/i, /deny/i, /negar/i, /y\/n/i, /\[y\]/i,
-  /proceed/i, /continuar/i
+  /proceed/i, /continuar/i, /always/i, /once/i, /skip/i
 ];
 
 const watchdogState = {
@@ -979,13 +1336,13 @@ const watchdogState = {
   log: []            // last 50 auto-approvals for debugging
 };
 
-// Track last-fail times so we don't hammer offline machines every 30s
+// Track last-fail times so we don't hammer offline machines continuously
 const machineFailTimes = new Map(); // machineId → timestamp of last fail
-const OFFLINE_RETRY_MS = 120_000;   // retry offline machines every 2 min
+const OFFLINE_RETRY_MS = 30_000;    // retry offline machines every 30s
 
-function shouldSkipOffline(machineId) {
-  if (isLocalMachine({ id: machineId })) return false;
-  const lastFail = machineFailTimes.get(machineId);
+function shouldSkipOffline(machine) {
+  if (isLocalMachine(machine)) return false;
+  const lastFail = machineFailTimes.get(machine.id);
   if (!lastFail) return false;
   return (Date.now() - lastFail) < OFFLINE_RETRY_MS;
 }
@@ -1015,21 +1372,23 @@ async function captureAllAppsState(machine) {
   const script = `set r to ""
 tell application "System Events"
   if exists process "Claude" then
+    set claudeTitle to "no-window"
     try
-      set r to r & "CLAUDE:" & (name of front window of process "Claude")
-    on error
-      set r to r & "CLAUDE:no-window"
+      set claudeTitle to name of front window of process "Claude"
     end try
+    if claudeTitle is missing value or claudeTitle is "" then set claudeTitle to "no-window"
+    set r to r & "CLAUDE:" & claudeTitle
   else
     set r to r & "CLAUDE:OFF"
   end if
   set r to r & "|||"
   if exists process "Codex" then
+    set codexTitle to "no-window"
     try
-      set r to r & "CODEX:" & (name of front window of process "Codex")
-    on error
-      set r to r & "CODEX:no-window"
+      set codexTitle to name of front window of process "Codex"
     end try
+    if codexTitle is missing value or codexTitle is "" then set codexTitle to "no-window"
+    set r to r & "CODEX:" & codexTitle
   else
     set r to r & "CODEX:OFF"
   end if
@@ -1040,8 +1399,8 @@ return r`;
     const script = `
 $claude = Get-Process -Name "Claude" -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 -or $_.MainWindowTitle } | Select-Object -First 1
 $codex = Get-Process -Name "Codex" -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 -or $_.MainWindowTitle } | Select-Object -First 1
-$claudeTitle = if ($claude) { if ($claude.MainWindowTitle) { $claude.MainWindowTitle } else { "Claude" } } else { "OFF" }
-$codexTitle = if ($codex) { if ($codex.MainWindowTitle) { $codex.MainWindowTitle } else { "Codex" } } else { "OFF" }
+$claudeTitle = if ($claude) { if ($claude.MainWindowTitle) { $claude.MainWindowTitle } else { "no-window" } } else { "OFF" }
+$codexTitle = if ($codex) { if ($codex.MainWindowTitle) { $codex.MainWindowTitle } else { "no-window" } } else { "OFF" }
 Write-Output ("CLAUDE:{0}|||CODEX:{1}" -f $claudeTitle, $codexTitle)
 `.trim();
     const { error, stdout } = await execWindows(script, 8_000);
@@ -1091,12 +1450,26 @@ function parseAppsState(raw) {
 }
 
 // Play a notification sound locally (always on Mac Mini, regardless of which machine triggered)
-function playApprovalSound() {
+function playApprovalSound(target = "claude") {
+  const soundKind = normalizeApprovalSoundKind(target);
   if (IS_WINDOWS) {
-    execWindows("[console]::beep(880,180)", 2000).catch?.(() => {});
+    const command = soundKind === "codex"
+      ? "[console]::beep(988,70); Start-Sleep -Milliseconds 16; [console]::beep(1480,76); Start-Sleep -Milliseconds 14; [console]::beep(1976,124)"
+      : "[console]::beep(1319,70); Start-Sleep -Milliseconds 18; [console]::beep(1661,82); Start-Sleep -Milliseconds 16; [console]::beep(2093,118)";
+    execWindows(command, 2500).catch?.(() => {});
     return;
   }
-  execFile("afplay", ["/System/Library/Sounds/Glass.aiff"], { timeout: 5000 }, () => {});
+  ensureApprovalSoundPath(soundKind)
+    .then((soundPath) => {
+      if (!soundPath) {
+        execFile("afplay", ["/System/Library/Sounds/Glass.aiff"], { timeout: 5000 }, () => {});
+        return;
+      }
+      execFile("afplay", [soundPath], { timeout: 5000 }, () => {});
+    })
+    .catch(() => {
+      execFile("afplay", ["/System/Library/Sounds/Glass.aiff"], { timeout: 5000 }, () => {});
+    });
 }
 
 // Scan Claude Desktop for tool-approval buttons.
@@ -1280,36 +1653,65 @@ function hasCodexApproval(text) {
   return hasNumbers && hasApproval;
 }
 
+function extractPendingTerminalApp(termResult, prefix) {
+  if (!termResult) return "";
+  const tokens = termResult.split("|").map((token) => token.trim()).filter(Boolean);
+  const hit = tokens.find((token) => token.startsWith(`${prefix}:`));
+  return hit ? hit.slice(prefix.length + 1).trim() : "";
+}
+
 // Detect approval prompts by reading terminal content on a remote/local machine
 async function detectTerminalApproval(machine) {
   if (isLocalWindowsMachine(machine)) {
     return "";
   }
-  // Read the last 30 lines of every Terminal tab to find approval prompts
+  // Read recent content from Terminal/iTerm2 tabs to find approval prompts
   const script = `
 set result to ""
-tell application "Terminal"
-  repeat with w in every window
-    repeat with t in every tab of w
-      try
-        set c to contents of t
-        -- Get last 800 chars (where the prompt would be)
-        set cLen to length of c
-        if cLen > 800 then
-          set c to text (cLen - 800) thru cLen of c
-        end if
-        -- Check for Claude Code approval patterns
-        if c contains "Do you want to proceed?" or c contains "Allow" or c contains "allow this" or c contains "Tool Use" or c contains "wants to" or c contains "Approve" or c contains "approve" or c contains "Y/n" or c contains "y/N" or c contains "Accept" or c contains "permit" then
-          set result to result & "CLAUDE_TERM:PENDING|"
-        end if
-        -- Check for Codex approval patterns (numbered options)
-        if c contains "1)" and c contains "2)" and (c contains "approve" or c contains "Allow" or c contains "always" or c contains "deny" or c contains "Deny" or c contains "Skip" or c contains "skip") then
-          set result to result & "CODEX_TERM:PENDING|"
-        end if
-      end try
+if application "Terminal" is running then
+  tell application "Terminal"
+    repeat with w in every window
+      repeat with t in every tab of w
+        try
+          set c to contents of t
+          set cLen to length of c
+          if cLen > 1200 then
+            set c to text (cLen - 1199) thru cLen of c
+          end if
+          if c contains "Do you want to proceed?" or c contains "Allow" or c contains "allow this" or c contains "Tool Use" or c contains "wants to" or c contains "Approve" or c contains "approve" or c contains "Y/n" or c contains "y/N" or c contains "Accept" or c contains "permit" or c contains "Always allow" or c contains "Allow once" or c contains "Run command" then
+            set result to result & "CLAUDE_TERM:Terminal|"
+          end if
+          if (c contains "1)" or c contains "1.") and (c contains "2)" or c contains "2.") and (c contains "approve" or c contains "Allow" or c contains "always" or c contains "deny" or c contains "Deny" or c contains "Skip" or c contains "skip" or c contains "Proceed") then
+            set result to result & "CODEX_TERM:Terminal|"
+          end if
+        end try
+      end repeat
     end repeat
-  end repeat
-end tell
+  end tell
+end if
+if application "iTerm2" is running then
+  tell application "iTerm2"
+    repeat with w in every window
+      repeat with t in every tab of w
+        repeat with s in every session of t
+          try
+            set c to contents of s
+            set cLen to length of c
+            if cLen > 1200 then
+              set c to text (cLen - 1199) thru cLen of c
+            end if
+            if c contains "Do you want to proceed?" or c contains "Allow" or c contains "allow this" or c contains "Tool Use" or c contains "wants to" or c contains "Approve" or c contains "approve" or c contains "Y/n" or c contains "y/N" or c contains "Accept" or c contains "permit" or c contains "Always allow" or c contains "Allow once" or c contains "Run command" then
+              set result to result & "CLAUDE_TERM:iTerm2|"
+            end if
+            if (c contains "1)" or c contains "1.") and (c contains "2)" or c contains "2.") and (c contains "approve" or c contains "Allow" or c contains "always" or c contains "deny" or c contains "Deny" or c contains "Skip" or c contains "skip" or c contains "Proceed") then
+              set result to result & "CODEX_TERM:iTerm2|"
+            end if
+          end try
+        end repeat
+      end repeat
+    end repeat
+  end tell
+end if
 return result`;
 
   if (isLocalMachine(machine)) {
@@ -1350,7 +1752,7 @@ async function watchdogCheck() {
       if (!mState.enabled) return;
 
       // Skip recently-failed (offline) machines to avoid blocking the cycle
-      if (shouldSkipOffline(machine.id)) return;
+      if (shouldSkipOffline(machine)) return;
 
       // Check GUI app states (window titles)
       const raw = await captureAllAppsState(machine);
@@ -1367,32 +1769,32 @@ async function watchdogCheck() {
       let codexApproved = false;
 
       // --- CLAUDE DESKTOP DETECTION ---
-      if (apps.claude && apps.claude !== "no-window") {
+      if (apps.claude !== null) {
         const buttonsStr = await detectClaudeApprovalButtons(machine);
         mState.claudeButtons = buttonsStr;
         if (hasClaudeToolApproval(buttonsStr)) {
-          playApprovalSound();
+          playApprovalSound("claude");
           await autoApprove(machine, "claude", mState);
           claudeApproved = true;
         }
       }
 
       // --- CODEX DETECTION ---
-      if (apps.codex && apps.codex !== "OFF") {
+      if (apps.codex !== null) {
         // 1. Check window title (fast, catches obvious cases)
         const codexTitle = (apps.codex || "").toLowerCase();
         const titleHasApproval = ["approve", "aprobar", "confirm", "confirmar",
           "accept", "aceptar", "permission", "permiso", "waiting", "esperando",
           "y/n", "allow", "permitir"].some((kw) => codexTitle.includes(kw));
         if (titleHasApproval) {
-          playApprovalSound();
+          playApprovalSound("codex");
           await autoApprove(machine, "codex", mState);
           codexApproved = true;
         } else {
           // 2. Read Codex app text content for numbered approval options
           const codexText = await detectCodexApproval(machine);
           if (hasCodexApproval(codexText)) {
-            playApprovalSound();
+            playApprovalSound("codex");
             await autoApprove(machine, "codex", mState);
             codexApproved = true;
           }
@@ -1404,13 +1806,15 @@ async function watchdogCheck() {
       if (!claudeApproved || !codexApproved) {
         const termResult = await detectTerminalApproval(machine);
         mState.terminalState = termResult; // debug
-        if (!claudeApproved && termResult.includes("CLAUDE_TERM:PENDING")) {
-          playApprovalSound();
-          await autoApprove(machine, "terminal_claude", mState);
+        const claudeTerminalApp = !claudeApproved ? extractPendingTerminalApp(termResult, "CLAUDE_TERM") : "";
+        const codexTerminalApp = !codexApproved ? extractPendingTerminalApp(termResult, "CODEX_TERM") : "";
+        if (!claudeApproved && claudeTerminalApp) {
+          playApprovalSound("terminal_claude");
+          await autoApprove(machine, "terminal_claude", mState, claudeTerminalApp);
         }
-        if (!codexApproved && termResult.includes("CODEX_TERM:PENDING")) {
-          playApprovalSound();
-          await autoApprove(machine, "codex", mState);
+        if (!codexApproved && codexTerminalApp) {
+          playApprovalSound("terminal_codex");
+          await autoApprove(machine, "terminal_codex", mState, codexTerminalApp);
         }
       }
     })
@@ -1420,27 +1824,25 @@ async function watchdogCheck() {
 const lastApprovalTimes = new Map(); // `${machineId}:${target}` → timestamp
 const APPROVAL_COOLDOWN_MS = 12_000; // don't re-approve same target within 12s
 
-async function autoApprove(machine, target, mState) {
+async function autoApprove(machine, target, mState, preferredTerminalApp = "") {
   // Cooldown: avoid double-approving while dialog is still clearing
   const cooldownKey = `${machine.id}:${target}`;
   const lastTime = lastApprovalTimes.get(cooldownKey) || 0;
   if (Date.now() - lastTime < APPROVAL_COOLDOWN_MS) return;
   lastApprovalTimes.set(cooldownKey, Date.now());
 
-  // terminal_claude uses Terminal app with Ctrl+Enter
-  const effectiveTarget = target === "terminal_claude" ? "terminal" : target;
-  const appName = TARGET_APPS[effectiveTarget] || TARGET_APPS.claude;
+  const effectiveTarget = TARGET_APPS[target] ? target : (target === "terminal_claude" ? "terminal" : target);
   let result;
   if (deriveLocalHostname(machine) && !isLocalMachine(machine)) {
-    result = await sendKeystroke(machine, true, appName);
-    if (!result.ok) result = await sendKeystroke(machine, false, appName);
+    result = await sendKeystroke(machine, true, effectiveTarget, preferredTerminalApp);
+    if (!result.ok) result = await sendKeystroke(machine, false, effectiveTarget, preferredTerminalApp);
   } else {
-    result = await sendKeystroke(machine, false, appName);
+    result = await sendKeystroke(machine, false, effectiveTarget, preferredTerminalApp);
   }
 
   if (result.ok) {
     if (target === "claude" || target === "terminal_claude") mState.claudeCount++;
-    else if (target === "codex") mState.codexCount++;
+    else if (target === "codex" || target === "terminal_codex") mState.codexCount++;
     mState.lastApproval = new Date().toISOString();
     mState.lastTarget = target;
 

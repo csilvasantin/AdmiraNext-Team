@@ -65,7 +65,9 @@
         "enabled": true,
         "user": "csilvasantin",
         "host": "macbookpronegro14.tail48b61c.ts.net",
+        "host_local": "MacBookProNegro14.local",
         "ip_tailscale": "100.101.192.1",
+        "connect_lan": "ssh csilvasantin@MacBookProNegro14.local",
         "connect_tailscale": "ssh -o ProxyCommand='tailscale nc %h %p' csilvasantin@macbookpronegro14"
       }
     },
@@ -87,7 +89,9 @@
         "enabled": true,
         "user": "csilvasantin",
         "host": "macbookair16.tail48b61c.ts.net",
+        "host_local": "MacBookAir16.local",
         "ip_tailscale": "100.99.176.126",
+        "connect_lan": "ssh csilvasantin@MacBookAir16.local",
         "connect_tailscale": "ssh csilvasantin@100.99.176.126"
       }
     },
@@ -153,7 +157,9 @@
         "enabled": true,
         "user": "csilvasantin",
         "host": "macbookairblanco.tail48b61c.ts.net",
+        "host_local": "MacBookAirBlanco.local",
         "ip_tailscale": "100.75.118.75",
+        "connect_lan": "ssh csilvasantin@MacBookAirBlanco.local",
         "connect_tailscale": "ssh csilvasantin@100.75.118.75",
         "hostAlias": "macbook-air-de-csilvasantin"
       },

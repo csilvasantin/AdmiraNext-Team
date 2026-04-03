@@ -1,5 +1,5 @@
 const STORAGE_KEY = "admira-next-new-member-draft-v1";
-const MACHINES_CACHE_BUST = "20260331-1";
+const MACHINES_CACHE_BUST = "20260402-2";
 const DEFAULT_FOCUS = "Onboarding y puesta a punto del equipo";
 const DEFAULT_LOCATION = "Madrid";
 const DEFAULT_MACHINE_ROLE = "Equipo principal";
@@ -47,6 +47,8 @@ const defaultDraft = {
   currentFocus: DEFAULT_FOCUS,
   hostAlias: "",
   tailscaleIp: "",
+  lanHost: "",
+  lanIp: "",
   sshUser: "csilvasantin",
   remoteReady: "no",
   tailscaleReady: false,
@@ -147,6 +149,8 @@ function applyPreset(draft) {
     member: draft.member || "",
     hostAlias: draft.hostAlias || "",
     tailscaleIp: draft.tailscaleIp || "",
+    lanHost: draft.lanHost || "",
+    lanIp: draft.lanIp || "",
     note: draft.note || ""
   };
 }
@@ -189,6 +193,8 @@ function readDraftFromForm() {
     currentFocus: cleanString(formData.get("currentFocus"), DEFAULT_FOCUS),
     hostAlias: cleanString(formData.get("hostAlias")),
     tailscaleIp: cleanString(formData.get("tailscaleIp")),
+    lanHost: cleanString(formData.get("lanHost")),
+    lanIp: cleanString(formData.get("lanIp")),
     sshUser: cleanString(formData.get("sshUser"), "csilvasantin"),
     remoteReady: cleanString(formData.get("remoteReady"), "no"),
     tailscaleReady: formData.get("tailscaleReady") === "on",
@@ -245,9 +251,22 @@ function buildDerivedRecord(draft) {
   const checklist = buildChecklist(draft);
   const checklistSummary = buildChecklistSummary(checklist);
   const hostAlias = normalizeToken(draft.hostAlias);
+  const lanHostInput = cleanString(draft.lanHost).toLowerCase();
+  const localHost = lanHostInput
+    ? (lanHostInput.includes(".") || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(lanHostInput)
+        ? lanHostInput
+        : `${normalizeToken(lanHostInput)}.local`)
+    : (hostAlias ? `${hostAlias}.local` : "");
   const fullHost = hostAlias ? (context.tailnet ? `${hostAlias}.${context.tailnet}` : hostAlias) : "";
   const sshEnabled = draft.remoteReady === "yes";
   const sshUser = cleanString(draft.sshUser, "csilvasantin");
+  const connectLan = sshEnabled
+    ? (draft.lanIp
+        ? `ssh ${sshUser}@${draft.lanIp}`
+        : localHost
+          ? `ssh ${sshUser}@${localHost}`
+          : "")
+    : "";
   const connectTailscale = sshEnabled
     ? (draft.tailscaleIp
         ? `ssh ${sshUser}@${draft.tailscaleIp}`
@@ -276,6 +295,8 @@ function buildDerivedRecord(draft) {
     note,
     hostAlias,
     tailscaleIp: draft.tailscaleIp,
+    lanHost: localHost,
+    lanIp: draft.lanIp,
     sshUser,
     remoteReady: sshEnabled,
     onboarding: checklist
@@ -298,6 +319,9 @@ function buildDerivedRecord(draft) {
       user: payload.sshUser,
       host: fullHost,
       ip_tailscale: payload.tailscaleIp,
+      ip_lan: payload.lanIp,
+      host_local: payload.lanHost,
+      connect_lan: connectLan,
       connect_tailscale: connectTailscale,
       hostAlias
     },
@@ -313,7 +337,9 @@ function buildDerivedRecord(draft) {
     payload,
     machineRecord,
     checklistSummary,
+    localHost,
     fullHost,
+    connectLan,
     connectTailscale
   };
 }
@@ -340,8 +366,12 @@ function renderPreview() {
   previewNodes.status.textContent = draft.status || "maintenance";
   previewNodes.status.className = `preview-status ${draft.status || "maintenance"}`;
   previewNodes.id.textContent = derived.machineRecord.id;
-  previewNodes.host.textContent = derived.fullHost || "Pendiente";
-  previewNodes.ssh.textContent = derived.connectTailscale || "Pendiente";
+  previewNodes.host.textContent = [
+    derived.fullHost ? `Tailscale: ${derived.fullHost}` : "",
+    derived.localHost ? `LAN: ${derived.localHost}` : "",
+    draft.lanIp ? `IP LAN: ${draft.lanIp}` : ""
+  ].filter(Boolean).join(" | ") || "Pendiente";
+  previewNodes.ssh.textContent = [derived.connectLan, derived.connectTailscale].filter(Boolean).join(" | ") || "Pendiente";
   previewNodes.location.textContent = draft.location || DEFAULT_LOCATION;
   previewNodes.role.textContent = draft.role || "Sin rol definido";
   previewNodes.machineRole.textContent = draft.machineRole || DEFAULT_MACHINE_ROLE;
@@ -474,6 +504,65 @@ ensure_brew_shellenv() {
   fi
 }
 
+pick_python_bin() {
+  for candidate in /opt/homebrew/bin/python3 /usr/local/bin/python3 python3 /Library/Developer/CommandLineTools/usr/bin/python3; do
+    if [ -x "$candidate" ]; then
+      printf '%s\\n' "$candidate"
+      return 0
+    fi
+
+    if command -v "$candidate" >/dev/null 2>&1; then
+      command -v "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+python_version_mm() {
+  local pybin="$1"
+  "$pybin" - <<'PY'
+import sys
+print(f"{sys.version_info.major}.{sys.version_info.minor}")
+PY
+}
+
+has_remote_preview_deps() {
+  local pybin="$1"
+  "$pybin" - <<'PY' >/dev/null 2>&1
+import Quartz.CoreGraphics as CG
+from AppKit import NSBitmapImageRep, NSJPEGFileType
+PY
+}
+
+ensure_remote_preview_prereqs() {
+  local pybin
+  pybin="$(pick_python_bin)" || {
+    echo "No se encontro python3 para preparar el preview remoto."
+    exit 1
+  }
+
+  if ! "$pybin" -m pip --version >/dev/null 2>&1; then
+    "$pybin" -m ensurepip --upgrade >/dev/null 2>&1 || true
+  fi
+
+  if has_remote_preview_deps "$pybin"; then
+    step "Dependencias de preview remoto ya instaladas"
+    return
+  fi
+
+  step "Instalando dependencias de preview remoto"
+  local pyver
+  pyver="$(python_version_mm "$pybin")"
+
+  if [ "$pyver" = "3.8" ] || [ "$pyver" = "3.9" ]; then
+    "$pybin" -m pip install --user "pyobjc-core<12" "pyobjc-framework-Quartz<12" "pyobjc-framework-Cocoa<12"
+  else
+    "$pybin" -m pip install --user pyobjc-framework-Quartz pyobjc-framework-Cocoa
+  fi
+}
+
 ensure_formula() {
   local formula="$1"
   if brew list "$formula" >/dev/null 2>&1; then
@@ -545,6 +634,7 @@ ensure_brew_shellenv
 ensure_formula defaultbrowser
 ensure_formula gh
 ensure_formula python
+ensure_remote_preview_prereqs
 ensure_cask google-chrome
 ensure_cask tailscale
 

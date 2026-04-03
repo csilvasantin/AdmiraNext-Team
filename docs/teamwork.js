@@ -7,6 +7,7 @@ const historyList = document.querySelector("#historyList");
 
 let machines = [];
 let isStaticMode = false;
+let latestSnapshots = {};
 const FUNNEL_URL = "https://macmini.tail48b61c.ts.net";
 const FUNNEL_HOST = "macmini.tail48b61c.ts.net";
 const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname === FUNNEL_HOST;
@@ -63,6 +64,35 @@ function formatTime(iso) {
   } catch {
     return iso;
   }
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
+function formatHistoryTarget(target) {
+  return {
+    claude: "Claude",
+    codex: "Codex",
+    terminal: "Terminal",
+    auto: "Auto"
+  }[target] || target || "Terminal";
+}
+
+function formatHistoryAction(action) {
+  return {
+    send: "directo",
+    "send-all": "global",
+    "onboarding-all": "onboarding",
+    "approve-all": "aprobar todos",
+    "approve-machine": "aprobar"
+  }[action] || "accion";
 }
 
 function resolveName(input) {
@@ -188,14 +218,21 @@ function renderHistory(entries) {
   }
 
   historyList.innerHTML = entries.map((e) => {
+    const machineName = escapeHtml(e.machineName);
+    const targetLabel = escapeHtml(formatHistoryTarget(e.target));
+    const actionLabel = escapeHtml(formatHistoryAction(e.action));
+    const prompt = escapeHtml(e.prompt);
+    const errorText = e.status === "error" && e.error
+      ? ` <span style="color: var(--offline); font-weight: 600;">· ${escapeHtml(e.error)}</span>`
+      : "";
     const captureHtml = e.captureId
       ? `<div class="tw-terminal" id="capture-${e.captureId}"><span class="tw-terminal-loading">Capturando terminal...</span></div>`
       : "";
     return `
       <div class="tw-entry">
         <div class="tw-entry-header">
-          <span class="tw-entry-machine">${e.machineName} <span class="tw-entry-target">${e.target || "terminal"}</span><span class="tw-entry-status ${e.status}"></span></span>
-          <span class="tw-entry-prompt">${e.prompt}</span>
+          <span class="tw-entry-machine">${machineName} <span class="tw-entry-target">${actionLabel}</span><span class="tw-entry-target">${targetLabel}</span><span class="tw-entry-status ${e.status}"></span></span>
+          <span class="tw-entry-prompt">${prompt}${errorText}</span>
           <span class="tw-entry-time">${formatTime(e.sentAt)}</span>
         </div>
         ${captureHtml}
@@ -248,15 +285,15 @@ async function loadMachines() {
     machines = data.machines;
     isStaticMode = false;
     syncTopActionVisibility();
-    renderMachineApproveList(null);
+    renderMachineApproveList(latestSnapshots);
   } catch {
     try {
-      const res = await fetch("./machines.json?v=20260401-2", { cache: "no-store" });
+      const res = await fetch("./machines.json?v=20260402-2", { cache: "no-store" });
       const data = await res.json();
       machines = data.machines;
       isStaticMode = true;
       syncTopActionVisibility();
-      renderMachineApproveList(null);
+      renderMachineApproveList(latestSnapshots);
     } catch {
       // no machines
     }
@@ -266,9 +303,20 @@ async function loadMachines() {
 // Per-machine approve
 const machineApproveList = document.querySelector("#machineApproveList");
 
-function formatTimeShort(iso) {
-  try { return new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }); }
-  catch { return ""; }
+function formatCaptureTime(iso) {
+  try {
+    const value = new Date(iso);
+    if (!Number.isFinite(value.getTime())) return "";
+    return value.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
+function renderCaptureStamp(snap) {
+  const time = formatCaptureTime(snap?.updatedAt);
+  if (!time) return "";
+  return `<span class="tw-machine-monitor-time" title="Captura tomada a las ${time}">${time}</span>`;
 }
 
 function hasPreviewPayload(snap) {
@@ -276,6 +324,13 @@ function hasPreviewPayload(snap) {
     (snap?.type === "image" && snap.image) ||
     (snap?.type === "images" && Array.isArray(snap.images) && snap.images.length > 0) ||
     snap?.text
+  );
+}
+
+function hasVisualPreviewPayload(snap) {
+  return Boolean(
+    (snap?.type === "image" && snap.image) ||
+    (snap?.type === "images" && Array.isArray(snap.images) && snap.images.length > 0)
   );
 }
 
@@ -287,6 +342,11 @@ function getPreviewAgeMs(snap) {
 function hasLivePreview(machine, snapshots) {
   const snap = snapshots?.[machine.id];
   return hasPreviewPayload(snap) && getPreviewAgeMs(snap) <= LIVE_PREVIEW_WINDOW_MS;
+}
+
+function hasLiveVisualPreview(machine, snapshots) {
+  const snap = snapshots?.[machine.id];
+  return hasVisualPreviewPayload(snap) && getPreviewAgeMs(snap) <= LIVE_PREVIEW_WINDOW_MS;
 }
 
 function getMachineStatusMeta(machine) {
@@ -307,6 +367,40 @@ function getPreviewMeta(machine, snap) {
     return { label: "sin preview", tone: "warn" };
   }
   return { label: "sin preview", tone: "off" };
+}
+
+function getRouteMeta(machine) {
+  const lanTarget = machine.ssh?.ip_lan || machine.ssh?.host_local || "";
+  const tailscaleTarget = machine.ssh?.ip_tailscale || machine.ssh?.host || "";
+
+  if (lanTarget && tailscaleTarget) {
+    return {
+      label: "LAN + Tailscale",
+      tone: "hybrid",
+      target: `${lanTarget} · ${tailscaleTarget}`,
+      title: `Rutas disponibles: LAN ${lanTarget} | Tailscale ${tailscaleTarget}`
+    };
+  }
+
+  if (lanTarget) {
+    return {
+      label: "LAN",
+      tone: "lan",
+      target: lanTarget,
+      title: `Ruta LAN preferida: ${lanTarget}`
+    };
+  }
+
+  if (tailscaleTarget) {
+    return {
+      label: "Tailscale",
+      tone: "tailscale",
+      target: tailscaleTarget,
+      title: `Ruta Tailscale disponible: ${tailscaleTarget}`
+    };
+  }
+
+  return null;
 }
 
 function getChannelMeta(machine, remoteReady) {
@@ -334,17 +428,17 @@ function renderMonitorContent(machine, snap) {
     return `<div class="tw-multi-monitor">${snap.images.map((imgPath, i) => {
       const src = (imgPath.startsWith("/") ? apiUrl(imgPath) : imgPath) + `?t=${t}`;
       return `<div class="tw-multi-screen ${orients[i]}"><img src="${src}" alt="${multiLabels[i]}"><span class="tw-screen-label">${multiLabels[i]}</span></div>`;
-    }).join("")}</div><span class="tw-machine-monitor-time">${formatTimeShort(snap.updatedAt)}</span>`;
+    }).join("")}</div>${renderCaptureStamp(snap)}`;
   }
 
   if (snap && snap.type === "image") {
     const imgSrc = snap.image.startsWith("/") ? apiUrl(snap.image) : snap.image;
     const cacheBust = imgSrc.includes("?") ? `&t=${Date.now()}` : `?t=${Date.now()}`;
-    return `<img src="${imgSrc}${cacheBust}" alt="${machine.name}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;"><span class="tw-machine-monitor-time">${formatTimeShort(snap.updatedAt)}</span>`;
+    return `<img src="${imgSrc}${cacheBust}" alt="${machine.name}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">${renderCaptureStamp(snap)}`;
   }
 
   if (snap && snap.text) {
-    return `<pre>${snap.text.replace(/</g, "&lt;")}</pre><span class="tw-machine-monitor-time">${formatTimeShort(snap.updatedAt)}</span>`;
+    return `<pre>${snap.text.replace(/</g, "&lt;")}</pre>${renderCaptureStamp(snap)}`;
   }
 
   if (ACTIVE_MACHINE_STATUSES.has(machine.status)) {
@@ -367,10 +461,28 @@ function getMachineSortScore(machine, snapshots) {
     maintenance: 1,
     offline: 0
   }[machine.status] ?? 0;
-  const livePreviewRank = hasLivePreview(machine, snapshots) ? 3 : 0;
+  const visualLiveRank = hasLiveVisualPreview(machine, snapshots) ? 5 : 0;
+  const visualPreviewRank = hasVisualPreviewPayload(snap) ? 2 : 0;
+  const livePreviewRank = hasLivePreview(machine, snapshots) ? 1 : 0;
   const hasPreviewRank = hasPreviewPayload(snap) ? 1 : 0;
   const remoteRank = machine.ssh?.enabled || machine.automation?.enabled ? 1 : 0;
-  return (livePreviewRank * 100) + (statusRank * 10) + (hasPreviewRank * 5) + remoteRank;
+  const updatedAtRank = Number.isFinite(new Date(snap?.updatedAt || "").getTime()) ? new Date(snap.updatedAt).getTime() : 0;
+
+  return (
+    (visualLiveRank * 1_000_000_000_000) +
+    (statusRank * 10_000_000_000) +
+    (remoteRank * 1_000_000_000) +
+    (visualPreviewRank * 10_000_000) +
+    (livePreviewRank * 1_000_000) +
+    (hasPreviewRank * 100_000) +
+    updatedAtRank
+  );
+}
+
+function compareMachinesForDisplay(a, b, snapshots) {
+  const score = getMachineSortScore(b, snapshots) - getMachineSortScore(a, snapshots);
+  if (score !== 0) return score;
+  return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
 }
 
 function renderMachineRow(m, snapshots) {
@@ -381,14 +493,16 @@ function renderMachineRow(m, snapshots) {
   const statusMeta = getMachineStatusMeta(m);
   const previewMeta = getPreviewMeta(m, snap);
   const channelMeta = getChannelMeta(m, remoteReady);
+  const routeMeta = getRouteMeta(m);
   const monitorContent = renderMonitorContent(m, snap);
 
   return `
     <div class="tw-machine-row tw-machine-row-${group}" data-id="${m.id}">
       <div class="tw-machine-monitor small" data-monitor="${m.id}">${monitorContent}</div>
       <div class="tw-machine-label">
-        <span class="tw-machine-name">${m.name}</span><br>
-        <span class="tw-machine-member">${m.member} · ${m.platform}</span>
+        <span class="tw-machine-name">${escapeHtml(m.name)}</span><br>
+        <span class="tw-machine-member">${escapeHtml(m.member)} · ${escapeHtml(m.platform)}</span>
+        ${routeMeta ? `<div class="tw-machine-route" title="${escapeHtml(routeMeta.title)}"><span class="tw-machine-route-badge ${routeMeta.tone}">${escapeHtml(routeMeta.label)}</span><span class="tw-machine-route-target">${escapeHtml(routeMeta.target)}</span></div>` : ""}
         <div class="tw-machine-statuses">
           <span class="tw-machine-status tw-machine-status-${statusMeta.tone}">${statusMeta.label}</span>
           <span class="tw-machine-status tw-machine-status-${previewMeta.tone}" data-preview-status="${m.id}">${previewMeta.label}</span>
@@ -418,7 +532,7 @@ function renderMachineApproveList(snapshots) {
     return;
   }
 
-  const sortWithinGroup = (items) => [...items].sort((a, b) => getMachineSortScore(b, snapshots) - getMachineSortScore(a, snapshots));
+  const sortWithinGroup = (items) => [...items].sort((a, b) => compareMachinesForDisplay(a, b, snapshots));
 
   const grouped = {
     council: sortWithinGroup(filtered.filter((m) => (m.unitType || "council") === "council")),
@@ -656,7 +770,7 @@ function updateSnapshotsInPlace(snapshots) {
     const sorted = [...rows].sort((a, b) => {
       const aMachine = machines.find((m) => m.id === a.dataset.id);
       const bMachine = machines.find((m) => m.id === b.dataset.id);
-      return getMachineSortScore(bMachine, snapshots) - getMachineSortScore(aMachine, snapshots);
+      return compareMachinesForDisplay(aMachine, bMachine, snapshots);
     });
     const orderChanged = rows.some((r, i) => r !== sorted[i]);
     if (orderChanged) sorted.forEach((row) => panel.appendChild(row));
@@ -668,23 +782,24 @@ async function loadSnapshots() {
     const res = await fetch(apiUrl("/api/teamwork/snapshots"), { cache: "no-store" });
     const data = await res.json();
     if (data.ok) {
+      latestSnapshots = data.snapshots || {};
       const hasRows = machineApproveList.querySelector(".tw-machine-row");
       if (hasRows) {
-        updateSnapshotsInPlace(data.snapshots);
+        updateSnapshotsInPlace(latestSnapshots);
       } else {
-        renderMachineApproveList(data.snapshots);
+        renderMachineApproveList(latestSnapshots);
       }
     }
   } catch {
     if (!isStaticMode) return;
     try {
-      const res = await fetch("./snapshots.json?v=20260401-3", { cache: "no-store" });
-      const snapshots = await res.json();
+      const res = await fetch("./snapshots.json?v=20260402-2", { cache: "no-store" });
+      latestSnapshots = await res.json();
       const hasRows = machineApproveList.querySelector(".tw-machine-row");
       if (hasRows) {
-        updateSnapshotsInPlace(snapshots);
+        updateSnapshotsInPlace(latestSnapshots);
       } else {
-        renderMachineApproveList(snapshots);
+        renderMachineApproveList(latestSnapshots);
       }
     } catch {
       // silently fail
