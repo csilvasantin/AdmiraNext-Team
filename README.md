@@ -132,10 +132,26 @@ Content-Type: application/json
 
 La publicación pública funciona en modo solo lectura con GitHub Pages y carga `machines.json` directamente.
 
+## Consejo de Administracion
+
+El consejo vive en `consejeros/` — 8 perfiles JSON (uno por silla) con personalidad, dominio, leyenda inspiradora y configuracion de bot de Telegram.
+
+### Estructura
+- **Lado operativo (izquierda):** CEO, CFO, COO, CTO — ejecucion, caja, operaciones, tecnologia
+- **Lado creativo (derecha):** CCO, CSO, CXO, CDO — marca, estrategia, experiencia, datos
+- **4 parejas coetaneas** cruzan la mesa para dar contraste a cada decision
+
+### Bots de Telegram
+Cada consejero tiene su propio bot que responde en su personaje. El codigo del bot esta en `csilvasantin/Yarig.Telegram` (src/consejero_bot.py + src/consejeros_runner.py).
+
+Ver `consejeros/README.md` para detalle completo.
+
 ## Siguientes pasos recomendados
 
-1. añadir login o clave simple;
-2. separar miembros, equipos y tareas en entidades propias;
-3. añadir comprobación real de salud de cada ordenador;
-4. integrar bots o agentes por máquina;
-5. guardar historial de estados y cambios de foco.
+1. completar los 3 bots pendientes (CSO, CXO, CDO) en @BotFather;
+2. crear grupo de Telegram "Consejo AdmiraNext" con los 8 bots;
+3. generar avatares pixel art de las leyendas y asignarlos via BotFather;
+4. activar modo LLM con API key de Anthropic;
+5. añadir login o clave simple al panel web;
+6. separar miembros, equipos y tareas en entidades propias;
+7. integrar bots o agentes por maquina.
