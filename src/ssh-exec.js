@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { readFile, unlink } from "node:fs/promises";
 import { hostname, homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { readMachines } from "./store.js";
+import { readMachines, updateMachineStatus } from "./store.js";
 
 const SSH_IDENTITY = join(homedir(), ".ssh", "admiranext_ed25519");
 const WINDOWS_SCREENSHOT_PYTHON = join(homedir(), "Documents", "Codex", "ClaudeBot", ".venv", "Scripts", "python.exe");
@@ -915,9 +915,11 @@ export async function refreshAllSnapshots() {
 
       if (!snap && !appsRaw && !isLocalMachine(machine)) {
         markMachineFailed(machine.id);
-        return; // offline
+        if (machine.status !== "offline") updateMachineStatus(machine.id, "offline").catch(() => {});
+        return;
       }
       markMachineOnline(machine.id);
+      if (machine.status === "offline") updateMachineStatus(machine.id, "online").catch(() => {});
 
       const apps = parseAppsState(appsRaw);
       const existing = machineSnapshots.get(machine.id) || {};
