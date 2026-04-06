@@ -2,6 +2,13 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const DATA_PATH = resolve(import.meta.dirname, "../data/machines.json");
+
+// Mutex para evitar escrituras concurrentes que corrompan el JSON
+let writeLock = Promise.resolve();
+function withWriteLock(fn) {
+  writeLock = writeLock.then(fn).catch(fn);
+  return writeLock;
+}
 const DEFAULT_LOCATION = "Madrid";
 const DEFAULT_PLATFORM = "macOS";
 const DEFAULT_COLOR = "plata";
@@ -106,21 +113,19 @@ export async function writeMachines(data) {
 }
 
 export async function updateMachineStatus(id, status, note = "") {
-  const data = await readMachines();
-  const machine = data.machines.find((item) => item.id === id);
-  if (!machine) {
-    return null;
-  }
+  return withWriteLock(async () => {
+    const data = await readMachines();
+    const machine = data.machines.find((item) => item.id === id);
+    if (!machine) return null;
 
-  machine.status = status;
-  if (typeof note === "string" && note.trim()) {
-    machine.note = note.trim();
-  }
-  machine.lastSeen = new Date().toISOString();
-  data.updatedAt = new Date().toISOString();
+    machine.status = status;
+    if (typeof note === "string" && note.trim()) machine.note = note.trim();
+    machine.lastSeen = new Date().toISOString();
+    data.updatedAt = new Date().toISOString();
 
-  await writeMachines(data);
-  return machine;
+    await writeMachines(data);
+    return machine;
+  });
 }
 
 export async function updateMachineSync(id, payload) {
