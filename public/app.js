@@ -83,11 +83,51 @@ function getTeamArea(machine) {
 }
 
 function getRemoteStatus(machine) {
-  return machine.ssh?.enabled ? "SSH listo" : "Sin SSH";
+  if (!machine.ssh?.enabled) {
+    return "Sin SSH";
+  }
+
+  const hasLanRoute = Boolean(machine.ssh?.connect_lan || machine.ssh?.ip_lan || machine.ssh?.host_local);
+  const hasTailscaleRoute = Boolean(machine.ssh?.connect_tailscale || machine.ssh?.ip_tailscale || machine.ssh?.host);
+
+  if (hasLanRoute && hasTailscaleRoute) {
+    return "LAN + Tailscale";
+  }
+
+  if (hasLanRoute) {
+    return "LAN listo";
+  }
+
+  if (hasTailscaleRoute) {
+    return "Tailscale listo";
+  }
+
+  return "SSH listo";
+}
+
+function getDerivedLanCommand(machine) {
+  if (!machine.ssh?.enabled) {
+    return "";
+  }
+
+  const user = machine.ssh?.user || "csilvasantin";
+  const lanTarget =
+    machine.ssh?.ip_lan
+    || machine.ssh?.host_local
+    || (machine.ssh?.hostAlias ? `${machine.ssh.hostAlias}.local` : "")
+    || (machine.ssh?.host ? `${machine.ssh.host.split(".")[0]}.local` : "");
+
+  return lanTarget ? `ssh ${user}@${lanTarget}` : "";
 }
 
 function getRemoteCommand(machine) {
-  return machine.ssh?.connect_tailscale || machine.ssh?.host || "";
+  return machine.ssh?.connect_lan
+    || getDerivedLanCommand(machine)
+    || machine.ssh?.connect_tailscale
+    || machine.ssh?.ip_lan
+    || machine.ssh?.host_local
+    || machine.ssh?.host
+    || "";
 }
 
 function getMachineSignals(machine) {
@@ -356,7 +396,7 @@ async function fetchData() {
     isStaticMode = false;
     return await response.json();
   } catch {
-    const response = await fetch("./machines.json?v=20260401-2", { cache: "no-store" });
+    const response = await fetch("./machines.json?v=20260402-2", { cache: "no-store" });
     isStaticMode = true;
     return await response.json();
   }

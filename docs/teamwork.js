@@ -4,9 +4,11 @@ const onboardingAllBtn = document.querySelector("#onboardingAllBtn");
 const sendAllTarget = document.querySelector("#sendAllTarget");
 const feedback = document.querySelector("#feedback");
 const historyList = document.querySelector("#historyList");
+const watchdogOverview = document.querySelector("#watchdogOverview");
 
 let machines = [];
 let isStaticMode = false;
+let latestSnapshots = {};
 const FUNNEL_URL = "https://macmini.tail48b61c.ts.net";
 const FUNNEL_HOST = "macmini.tail48b61c.ts.net";
 const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname === FUNNEL_HOST;
@@ -19,6 +21,7 @@ const GROUP_LABELS = {
   worker: "Equipo"
 };
 const LIVE_PREVIEW_WINDOW_MS = 10 * 60 * 1000;
+const WATCHDOG_SIGNAL_WINDOW_MS = 2 * 60 * 1000;
 const SNAPSHOT_REFRESH_MS = 15_000;
 const MACHINE_REFRESH_MS = 30_000;
 const WATCHDOG_REFRESH_MS = 15_000;
@@ -63,6 +66,35 @@ function formatTime(iso) {
   } catch {
     return iso;
   }
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
+function formatHistoryTarget(target) {
+  return {
+    claude: "Claude",
+    codex: "Codex",
+    terminal: "Terminal",
+    auto: "Auto"
+  }[target] || target || "Terminal";
+}
+
+function formatHistoryAction(action) {
+  return {
+    send: "directo",
+    "send-all": "global",
+    "onboarding-all": "onboarding",
+    "approve-all": "aprobar todos",
+    "approve-machine": "aprobar"
+  }[action] || "accion";
 }
 
 function resolveName(input) {
@@ -188,14 +220,21 @@ function renderHistory(entries) {
   }
 
   historyList.innerHTML = entries.map((e) => {
+    const machineName = escapeHtml(e.machineName);
+    const targetLabel = escapeHtml(formatHistoryTarget(e.target));
+    const actionLabel = escapeHtml(formatHistoryAction(e.action));
+    const prompt = escapeHtml(e.prompt);
+    const errorText = e.status === "error" && e.error
+      ? ` <span style="color: var(--offline); font-weight: 600;">· ${escapeHtml(e.error)}</span>`
+      : "";
     const captureHtml = e.captureId
       ? `<div class="tw-terminal" id="capture-${e.captureId}"><span class="tw-terminal-loading">Capturando terminal...</span></div>`
       : "";
     return `
       <div class="tw-entry">
         <div class="tw-entry-header">
-          <span class="tw-entry-machine">${e.machineName} <span class="tw-entry-target">${e.target || "terminal"}</span><span class="tw-entry-status ${e.status}"></span></span>
-          <span class="tw-entry-prompt">${e.prompt}</span>
+          <span class="tw-entry-machine">${machineName} <span class="tw-entry-target">${actionLabel}</span><span class="tw-entry-target">${targetLabel}</span><span class="tw-entry-status ${e.status}"></span></span>
+          <span class="tw-entry-prompt">${prompt}${errorText}</span>
           <span class="tw-entry-time">${formatTime(e.sentAt)}</span>
         </div>
         ${captureHtml}
@@ -248,15 +287,15 @@ async function loadMachines() {
     machines = data.machines;
     isStaticMode = false;
     syncTopActionVisibility();
-    renderMachineApproveList(null);
+    renderMachineApproveList(latestSnapshots);
   } catch {
     try {
-      const res = await fetch("./machines.json?v=20260401-2", { cache: "no-store" });
+      const res = await fetch("./machines.json?v=20260402-2", { cache: "no-store" });
       const data = await res.json();
       machines = data.machines;
       isStaticMode = true;
       syncTopActionVisibility();
-      renderMachineApproveList(null);
+      renderMachineApproveList(latestSnapshots);
     } catch {
       // no machines
     }
@@ -266,9 +305,20 @@ async function loadMachines() {
 // Per-machine approve
 const machineApproveList = document.querySelector("#machineApproveList");
 
-function formatTimeShort(iso) {
-  try { return new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }); }
-  catch { return ""; }
+function formatCaptureTime(iso) {
+  try {
+    const value = new Date(iso);
+    if (!Number.isFinite(value.getTime())) return "";
+    return value.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
+function renderCaptureStamp(snap) {
+  const time = formatCaptureTime(snap?.updatedAt);
+  if (!time) return "";
+  return `<span class="tw-machine-monitor-time" title="Captura tomada a las ${time}">${time}</span>`;
 }
 
 function hasPreviewPayload(snap) {
@@ -276,6 +326,13 @@ function hasPreviewPayload(snap) {
     (snap?.type === "image" && snap.image) ||
     (snap?.type === "images" && Array.isArray(snap.images) && snap.images.length > 0) ||
     snap?.text
+  );
+}
+
+function hasVisualPreviewPayload(snap) {
+  return Boolean(
+    (snap?.type === "image" && snap.image) ||
+    (snap?.type === "images" && Array.isArray(snap.images) && snap.images.length > 0)
   );
 }
 
@@ -287,6 +344,11 @@ function getPreviewAgeMs(snap) {
 function hasLivePreview(machine, snapshots) {
   const snap = snapshots?.[machine.id];
   return hasPreviewPayload(snap) && getPreviewAgeMs(snap) <= LIVE_PREVIEW_WINDOW_MS;
+}
+
+function hasLiveVisualPreview(machine, snapshots) {
+  const snap = snapshots?.[machine.id];
+  return hasVisualPreviewPayload(snap) && getPreviewAgeMs(snap) <= LIVE_PREVIEW_WINDOW_MS;
 }
 
 function getMachineStatusMeta(machine) {
@@ -309,6 +371,40 @@ function getPreviewMeta(machine, snap) {
   return { label: "sin preview", tone: "off" };
 }
 
+function getRouteMeta(machine) {
+  const lanTarget = machine.ssh?.ip_lan || machine.ssh?.host_local || "";
+  const tailscaleTarget = machine.ssh?.ip_tailscale || machine.ssh?.host || "";
+
+  if (lanTarget && tailscaleTarget) {
+    return {
+      label: "LAN + Tailscale",
+      tone: "hybrid",
+      target: `${lanTarget} · ${tailscaleTarget}`,
+      title: `Rutas disponibles: LAN ${lanTarget} | Tailscale ${tailscaleTarget}`
+    };
+  }
+
+  if (lanTarget) {
+    return {
+      label: "LAN",
+      tone: "lan",
+      target: lanTarget,
+      title: `Ruta LAN preferida: ${lanTarget}`
+    };
+  }
+
+  if (tailscaleTarget) {
+    return {
+      label: "Tailscale",
+      tone: "tailscale",
+      target: tailscaleTarget,
+      title: `Ruta Tailscale disponible: ${tailscaleTarget}`
+    };
+  }
+
+  return null;
+}
+
 function getChannelMeta(machine, remoteReady) {
   if (remoteReady) {
     return { label: "🤖 0", tone: "ok", title: "Canal remoto listo. Sin auto-aprobaciones." };
@@ -325,6 +421,94 @@ function getChannelMeta(machine, remoteReady) {
   return { label: "offline", tone: "off", title: "Equipo sin conexion remota disponible." };
 }
 
+function parseWatchdogTimestamp(iso) {
+  const value = new Date(iso || "").getTime();
+  return Number.isFinite(value) ? value : 0;
+}
+
+function isRecentWatchdogSignal(iso) {
+  const value = parseWatchdogTimestamp(iso);
+  return value > 0 && (Date.now() - value) <= WATCHDOG_SIGNAL_WINDOW_MS;
+}
+
+function getWatchdogSignalTone(status) {
+  if (status === "pending") return "pending";
+  if (status === "cooldown") return "cooldown";
+  return "auto-approved";
+}
+
+function formatWatchdogSignalStatus(status) {
+  if (status === "pending") return "esperando";
+  if (status === "cooldown") return "reaccionando";
+  return "autoaprobado";
+}
+
+function getMachineWatchdogSignals(machineId) {
+  const stats = watchdogStats?.[machineId];
+  if (!stats) return [];
+
+  const signals = Array.isArray(stats.currentSignals)
+    ? stats.currentSignals.filter((signal) => signal && signal.summary)
+    : [];
+
+  if (signals.length > 0) {
+    return [...signals].sort((a, b) => {
+      const priority = (signal) => ({
+        pending: 3,
+        cooldown: 2,
+        "auto-approved": 1
+      }[signal?.status] || 0);
+      return (
+        priority(b) - priority(a) ||
+        parseWatchdogTimestamp(b.detectedAt || b.resolvedAt) - parseWatchdogTimestamp(a.detectedAt || a.resolvedAt)
+      );
+    });
+  }
+
+  if (isRecentWatchdogSignal(stats.lastDetectionAt) && stats.lastDetectionSummary) {
+    return [{
+      target: stats.lastDetectionTarget || "auto",
+      label: stats.lastDetectionLabel || stats.lastDetectionSummary,
+      source: stats.lastDetectionSource || "",
+      summary: stats.lastDetectionSummary,
+      status: stats.lastDetectionStatus || "pending",
+      detectedAt: stats.lastDetectionAt,
+      resolvedAt: stats.lastResolutionAt || stats.lastApproval || stats.lastDetectionAt
+    }];
+  }
+
+  return [];
+}
+
+function getMachineWatchdogPriority(machineId) {
+  const signals = getMachineWatchdogSignals(machineId);
+  if (signals.some((signal) => signal.status === "pending")) return 4;
+  if (signals.some((signal) => signal.status === "cooldown")) return 3;
+  if (signals.some((signal) => signal.status === "auto-approved")) return 2;
+  const stats = watchdogStats?.[machineId];
+  const totalApprovals = (stats?.claudeCount || 0) + (stats?.codexCount || 0);
+  return totalApprovals > 0 ? 1 : 0;
+}
+
+function renderMachineWatchdogSignals(machineId) {
+  const signals = getMachineWatchdogSignals(machineId);
+  if (!signals.length) return "";
+
+  const chips = signals.slice(0, 2).map((signal) => {
+    const status = formatWatchdogSignalStatus(signal.status);
+    const tone = getWatchdogSignalTone(signal.status);
+    const time = formatTime(signal.resolvedAt || signal.detectedAt);
+    const title = `${signal.summary} · ${status}${time ? ` · ${time}` : ""}`;
+    return `<span class="tw-watchdog-chip ${tone}" title="${escapeHtml(title)}"><span class="tw-watchdog-chip-label">${escapeHtml(status)} · ${escapeHtml(signal.summary)}</span>${time ? `<span class="tw-watchdog-chip-time">${escapeHtml(time)}</span>` : ""}</span>`;
+  }).join("");
+
+  const extra = signals.length > 2
+    ? `<span class="tw-watchdog-chip" title="${signals.length - 2} detecciones adicionales">+${signals.length - 2}</span>`
+    : "";
+
+  return `<div class="tw-machine-watchdog" data-watchdog-signals="${machineId}">${chips}${extra}</div>`;
+}
+
 function renderMonitorContent(machine, snap) {
   const multiLabels = ["Claude", "Studio", "Codex"];
 
@@ -334,17 +518,17 @@ function renderMonitorContent(machine, snap) {
     return `<div class="tw-multi-monitor">${snap.images.map((imgPath, i) => {
       const src = (imgPath.startsWith("/") ? apiUrl(imgPath) : imgPath) + `?t=${t}`;
       return `<div class="tw-multi-screen ${orients[i]}"><img src="${src}" alt="${multiLabels[i]}"><span class="tw-screen-label">${multiLabels[i]}</span></div>`;
-    }).join("")}</div><span class="tw-machine-monitor-time">${formatTimeShort(snap.updatedAt)}</span>`;
+    }).join("")}</div>${renderCaptureStamp(snap)}`;
   }
 
   if (snap && snap.type === "image") {
     const imgSrc = snap.image.startsWith("/") ? apiUrl(snap.image) : snap.image;
     const cacheBust = imgSrc.includes("?") ? `&t=${Date.now()}` : `?t=${Date.now()}`;
-    return `<img src="${imgSrc}${cacheBust}" alt="${machine.name}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;"><span class="tw-machine-monitor-time">${formatTimeShort(snap.updatedAt)}</span>`;
+    return `<img src="${imgSrc}${cacheBust}" alt="${machine.name}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">${renderCaptureStamp(snap)}`;
   }
 
   if (snap && snap.text) {
-    return `<pre>${snap.text.replace(/</g, "&lt;")}</pre><span class="tw-machine-monitor-time">${formatTimeShort(snap.updatedAt)}</span>`;
+    return `<pre>${snap.text.replace(/</g, "&lt;")}</pre>${renderCaptureStamp(snap)}`;
   }
 
   if (ACTIVE_MACHINE_STATUSES.has(machine.status)) {
@@ -360,6 +544,7 @@ function renderMonitorContent(machine, snap) {
 
 function getMachineSortScore(machine, snapshots) {
   const snap = snapshots?.[machine.id];
+  const watchdogRank = getMachineWatchdogPriority(machine.id);
   const statusRank = {
     online: 4,
     busy: 3,
@@ -367,10 +552,29 @@ function getMachineSortScore(machine, snapshots) {
     maintenance: 1,
     offline: 0
   }[machine.status] ?? 0;
-  const livePreviewRank = hasLivePreview(machine, snapshots) ? 3 : 0;
+  const visualLiveRank = hasLiveVisualPreview(machine, snapshots) ? 5 : 0;
+  const visualPreviewRank = hasVisualPreviewPayload(snap) ? 2 : 0;
+  const livePreviewRank = hasLivePreview(machine, snapshots) ? 1 : 0;
   const hasPreviewRank = hasPreviewPayload(snap) ? 1 : 0;
   const remoteRank = machine.ssh?.enabled || machine.automation?.enabled ? 1 : 0;
-  return (livePreviewRank * 100) + (statusRank * 10) + (hasPreviewRank * 5) + remoteRank;
+  const updatedAtRank = Number.isFinite(new Date(snap?.updatedAt || "").getTime()) ? new Date(snap.updatedAt).getTime() : 0;
+
+  return (
+    (watchdogRank * 100_000_000_000_000) +
+    (visualLiveRank * 1_000_000_000_000) +
+    (statusRank * 10_000_000_000) +
+    (remoteRank * 1_000_000_000) +
+    (visualPreviewRank * 10_000_000) +
+    (livePreviewRank * 1_000_000) +
+    (hasPreviewRank * 100_000) +
+    updatedAtRank
+  );
+}
+
+function compareMachinesForDisplay(a, b, snapshots) {
+  const score = getMachineSortScore(b, snapshots) - getMachineSortScore(a, snapshots);
+  if (score !== 0) return score;
+  return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
 }
 
 function renderMachineRow(m, snapshots) {
@@ -381,14 +585,16 @@ function renderMachineRow(m, snapshots) {
   const statusMeta = getMachineStatusMeta(m);
   const previewMeta = getPreviewMeta(m, snap);
   const channelMeta = getChannelMeta(m, remoteReady);
+  const routeMeta = getRouteMeta(m);
   const monitorContent = renderMonitorContent(m, snap);
 
   return `
     <div class="tw-machine-row tw-machine-row-${group}" data-id="${m.id}">
       <div class="tw-machine-monitor small" data-monitor="${m.id}">${monitorContent}</div>
       <div class="tw-machine-label">
-        <span class="tw-machine-name">${m.name}</span><br>
-        <span class="tw-machine-member">${m.member} · ${m.platform}</span>
+        <span class="tw-machine-name">${escapeHtml(m.name)}</span><br>
+        <span class="tw-machine-member">${escapeHtml(m.member)} · ${escapeHtml(m.platform)}</span>
+        ${routeMeta ? `<div class="tw-machine-route" title="${escapeHtml(routeMeta.title)}"><span class="tw-machine-route-badge ${routeMeta.tone}">${escapeHtml(routeMeta.label)}</span><span class="tw-machine-route-target">${escapeHtml(routeMeta.target)}</span></div>` : ""}
         <div class="tw-machine-statuses">
           <span class="tw-machine-status tw-machine-status-${statusMeta.tone}">${statusMeta.label}</span>
           <span class="tw-machine-status tw-machine-status-${previewMeta.tone}" data-preview-status="${m.id}">${previewMeta.label}</span>
@@ -398,6 +604,7 @@ function renderMachineRow(m, snapshots) {
           ${snap?.claudeState ? `<span class="tw-app-tag claude" title="Claude: ${snap.claudeState}">C</span>` : ""}
           ${snap?.codexState ? `<span class="tw-app-tag codex" title="Codex: ${snap.codexState}">X</span>` : ""}
         </span>
+        ${renderMachineWatchdogSignals(m.id)}
       </div>
       <input class="tw-machine-input" data-machine="${m.id}" type="text" placeholder="Prompt para ${m.member}..." ${remoteReady ? "" : "disabled"}>
       <select class="tw-approve-sm" data-machine-target="${m.id}" style="background:var(--panel);color:var(--ink);border:1px solid var(--line);padding:8px 6px;font-size:11px;border-radius:10px;">
@@ -418,7 +625,7 @@ function renderMachineApproveList(snapshots) {
     return;
   }
 
-  const sortWithinGroup = (items) => [...items].sort((a, b) => getMachineSortScore(b, snapshots) - getMachineSortScore(a, snapshots));
+  const sortWithinGroup = (items) => [...items].sort((a, b) => compareMachinesForDisplay(a, b, snapshots));
 
   const grouped = {
     council: sortWithinGroup(filtered.filter((m) => (m.unitType || "council") === "council")),
@@ -543,6 +750,9 @@ function renderMachineApproveList(snapshots) {
       }
     });
   });
+
+  updateWatchdogRows();
+  renderWatchdogOverview();
 }
 
 // Approve buttons
@@ -656,11 +866,13 @@ function updateSnapshotsInPlace(snapshots) {
     const sorted = [...rows].sort((a, b) => {
       const aMachine = machines.find((m) => m.id === a.dataset.id);
       const bMachine = machines.find((m) => m.id === b.dataset.id);
-      return getMachineSortScore(bMachine, snapshots) - getMachineSortScore(aMachine, snapshots);
+      return compareMachinesForDisplay(aMachine, bMachine, snapshots);
     });
     const orderChanged = rows.some((r, i) => r !== sorted[i]);
     if (orderChanged) sorted.forEach((row) => panel.appendChild(row));
   }
+
+  updateWatchdogRows();
 }
 
 async function loadSnapshots() {
@@ -668,23 +880,24 @@ async function loadSnapshots() {
     const res = await fetch(apiUrl("/api/teamwork/snapshots"), { cache: "no-store" });
     const data = await res.json();
     if (data.ok) {
+      latestSnapshots = data.snapshots || {};
       const hasRows = machineApproveList.querySelector(".tw-machine-row");
       if (hasRows) {
-        updateSnapshotsInPlace(data.snapshots);
+        updateSnapshotsInPlace(latestSnapshots);
       } else {
-        renderMachineApproveList(data.snapshots);
+        renderMachineApproveList(latestSnapshots);
       }
     }
   } catch {
     if (!isStaticMode) return;
     try {
-      const res = await fetch("./snapshots.json?v=20260401-3", { cache: "no-store" });
-      const snapshots = await res.json();
+      const res = await fetch("./snapshots.json?v=20260402-2", { cache: "no-store" });
+      latestSnapshots = await res.json();
       const hasRows = machineApproveList.querySelector(".tw-machine-row");
       if (hasRows) {
-        updateSnapshotsInPlace(snapshots);
+        updateSnapshotsInPlace(latestSnapshots);
       } else {
-        renderMachineApproveList(snapshots);
+        renderMachineApproveList(latestSnapshots);
       }
     } catch {
       // silently fail
@@ -697,6 +910,7 @@ async function loadSnapshots() {
 const watchdogToggle = document.querySelector("#watchdogToggle");
 const watchdogPulse = document.querySelector("#watchdogPulse");
 let watchdogStats = {};
+let watchdogLog = [];
 
 watchdogToggle.addEventListener("change", async () => {
   const enabled = watchdogToggle.checked;
@@ -718,9 +932,102 @@ async function loadWatchdogStats() {
       watchdogToggle.checked = data.enabled;
       watchdogPulse.classList.toggle("off", !data.enabled);
       watchdogStats = data.perMachine || {};
-      updateWatchdogBadges();
+      watchdogLog = Array.isArray(data.log) ? data.log : [];
+      updateWatchdogUI();
     }
   } catch { /* ignore */ }
+}
+
+function renderWatchdogOverview() {
+  if (!watchdogOverview) return;
+
+  const councilMachines = machines.filter((machine) => (machine.unitType || "council") === "council");
+  const waiting = [];
+  const recent = [];
+
+  for (const machine of councilMachines) {
+    for (const signal of getMachineWatchdogSignals(machine.id)) {
+      const entry = { machine, signal };
+      if (signal.status === "pending" || signal.status === "cooldown") waiting.push(entry);
+      else recent.push(entry);
+    }
+  }
+
+  waiting.sort((a, b) => parseWatchdogTimestamp(b.signal.detectedAt) - parseWatchdogTimestamp(a.signal.detectedAt));
+  recent.sort((a, b) => parseWatchdogTimestamp(b.signal.resolvedAt || b.signal.detectedAt) - parseWatchdogTimestamp(a.signal.resolvedAt || a.signal.detectedAt));
+
+  if (waiting.length > 0) {
+    watchdogOverview.className = "tw-watchdog-overview hot";
+    watchdogOverview.innerHTML = `
+      <div class="tw-watchdog-overview-title">
+        <span>Consejo atento</span>
+        <span class="tw-watchdog-overview-meta">${waiting.length} esperando reaccion</span>
+      </div>
+      <div class="tw-watchdog-overview-body">
+        ${waiting.slice(0, 4).map(({ machine, signal }) => `<span class="tw-watchdog-chip pending" title="${escapeHtml(`${machine.name} · ${signal.summary}`)}"><span class="tw-watchdog-chip-label">${escapeHtml(machine.member || machine.name)} · ${escapeHtml(signal.summary)}</span><span class="tw-watchdog-chip-time">${escapeHtml(formatTime(signal.detectedAt))}</span></span>`).join("")}
+      </div>
+    `;
+    return;
+  }
+
+  if (recent.length > 0) {
+    watchdogOverview.className = "tw-watchdog-overview recent";
+    watchdogOverview.innerHTML = `
+      <div class="tw-watchdog-overview-title">
+        <span>Ultima reaccion del Consejo</span>
+        <span class="tw-watchdog-overview-meta">${recent.length} recientes</span>
+      </div>
+      <div class="tw-watchdog-overview-body">
+        ${recent.slice(0, 4).map(({ machine, signal }) => `<span class="tw-watchdog-chip auto-approved" title="${escapeHtml(`${machine.name} · ${signal.summary}`)}"><span class="tw-watchdog-chip-label">${escapeHtml(machine.member || machine.name)} · ${escapeHtml(signal.summary)}</span><span class="tw-watchdog-chip-time">${escapeHtml(formatTime(signal.resolvedAt || signal.detectedAt))}</span></span>`).join("")}
+      </div>
+    `;
+    return;
+  }
+
+  const latestLog = watchdogLog.length ? watchdogLog[watchdogLog.length - 1] : null;
+  watchdogOverview.className = "tw-watchdog-overview";
+  watchdogOverview.innerHTML = `
+    <div class="tw-watchdog-overview-title">
+      <span>Consejo atento</span>
+      <span class="tw-watchdog-overview-meta">${watchdogToggle.checked ? "watchdog activo" : "watchdog pausado"}</span>
+    </div>
+    <div class="tw-watchdog-overview-empty">${latestLog ? `Sin esperas ahora. Ultima autoaprobacion: ${escapeHtml(latestLog.machine)} · ${escapeHtml(latestLog.summary || latestLog.target || "Aprobacion")} · ${escapeHtml(formatTime(latestLog.at))}` : "Sin señales recientes de aprobacion en el Consejo."}</div>
+  `;
+}
+
+function updateWatchdogRows() {
+  document.querySelectorAll(".tw-machine-row").forEach((row) => {
+    const machineId = row.dataset.id;
+    const signalMarkup = renderMachineWatchdogSignals(machineId);
+    const signalEl = row.querySelector(`[data-watchdog-signals="${machineId}"]`);
+    if (signalMarkup) {
+      if (signalEl) signalEl.outerHTML = signalMarkup;
+      else row.querySelector(".tw-machine-label")?.insertAdjacentHTML("beforeend", signalMarkup);
+    } else if (signalEl) {
+      signalEl.remove();
+    }
+
+    const signals = getMachineWatchdogSignals(machineId);
+    const hasWaiting = signals.some((signal) => signal.status === "pending" || signal.status === "cooldown");
+    const hasRecent = !hasWaiting && signals.length > 0;
+    row.classList.toggle("tw-machine-row-alert", hasWaiting);
+    row.classList.toggle("tw-machine-row-recent", hasRecent);
+  });
+}
+
+function resortMachineRows() {
+  for (const group of ["council", "worker"]) {
+    const panel = machineApproveList.querySelector(`[data-group-panel="${group}"]`);
+    if (!panel) continue;
+    const rows = [...panel.querySelectorAll(".tw-machine-row")];
+    const sorted = [...rows].sort((a, b) => {
+      const aMachine = machines.find((machine) => machine.id === a.dataset.id);
+      const bMachine = machines.find((machine) => machine.id === b.dataset.id);
+      return compareMachinesForDisplay(aMachine, bMachine, latestSnapshots);
+    });
+    const orderChanged = rows.some((row, index) => row !== sorted[index]);
+    if (orderChanged) sorted.forEach((row) => panel.appendChild(row));
+  }
 }
 
 function updateWatchdogBadges() {
@@ -730,9 +1037,16 @@ function updateWatchdogBadges() {
     const stats = watchdogStats[machineId];
     if (stats) {
       const total = (stats.claudeCount || 0) + (stats.codexCount || 0);
-      if (total > 0) {
+      const signals = getMachineWatchdogSignals(machineId);
+      const waiting = signals.filter((signal) => signal.status === "pending" || signal.status === "cooldown");
+      badge.classList.toggle("tw-auto-badge-live", waiting.length > 0);
+      if (waiting.length > 0) {
+        badge.textContent = `⚠ ${waiting.length}`;
+        badge.title = waiting.map((signal) => `${signal.summary} · ${formatWatchdogSignalStatus(signal.status)}`).join(" | ");
+        badge.classList.add("has-approvals");
+      } else if (total > 0) {
         badge.textContent = `🤖 ${total}`;
-        badge.title = `Claude: ${stats.claudeCount || 0} | Codex: ${stats.codexCount || 0}`;
+        badge.title = `Claude: ${stats.claudeCount || 0} | Codex: ${stats.codexCount || 0}${stats.lastDetectionSummary ? ` | Ultima: ${stats.lastDetectionSummary}` : ""}`;
         badge.classList.add("has-approvals");
       } else {
         badge.textContent = "🤖 0";
@@ -741,6 +1055,13 @@ function updateWatchdogBadges() {
       }
     }
   });
+}
+
+function updateWatchdogUI() {
+  updateWatchdogBadges();
+  updateWatchdogRows();
+  renderWatchdogOverview();
+  resortMachineRows();
 }
 
 // ─── Init ──────────────────────────────────────────────────────────

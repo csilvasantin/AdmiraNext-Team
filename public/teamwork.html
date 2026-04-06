@@ -84,6 +84,50 @@
         padding: 0 8px;
         color: #5a9a6a;
       }
+      .tw-watchdog-overview {
+        display: grid;
+        gap: 10px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(0, 255, 70, 0.12);
+        background: rgba(5, 18, 11, 0.68);
+      }
+      .tw-watchdog-overview.hot {
+        border-color: rgba(214, 48, 49, 0.28);
+        background: linear-gradient(135deg, rgba(62, 12, 16, 0.72), rgba(18, 22, 12, 0.72));
+      }
+      .tw-watchdog-overview.recent {
+        border-color: rgba(9, 132, 227, 0.26);
+        background: linear-gradient(135deg, rgba(8, 25, 39, 0.72), rgba(11, 20, 16, 0.72));
+      }
+      .tw-watchdog-overview-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #c8ead2;
+      }
+      .tw-watchdog-overview-meta {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: #81c995;
+      }
+      .tw-watchdog-overview.hot .tw-watchdog-overview-meta { color: #ff8f8f; }
+      .tw-watchdog-overview.recent .tw-watchdog-overview-meta { color: #8fc8ff; }
+      .tw-watchdog-overview-body {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .tw-watchdog-overview-empty {
+        color: var(--muted);
+        font-size: 13px;
+      }
 
       .tw-row { display: grid; grid-template-columns: 1fr auto 2fr auto; gap: 10px; align-items: end; }
 
@@ -306,6 +350,10 @@
         border-radius: 12px; white-space: nowrap;
       }
       .tw-auto-badge.has-approvals { color: #2d6a4f; font-weight: 600; }
+      .tw-auto-badge-live {
+        background: rgba(214, 48, 49, 0.12) !important;
+        color: #ff9b9b !important;
+      }
       .tw-auto-badge-warn {
         background: rgba(195, 139, 45, 0.14) !important;
         color: #c38b2d !important;
@@ -351,6 +399,14 @@
         border-bottom: 1px solid var(--line);
       }
       .tw-machine-row:last-child { border-bottom: none; }
+      .tw-machine-row-alert {
+        border-color: rgba(214, 48, 49, 0.22) !important;
+        box-shadow: inset 0 0 0 1px rgba(214, 48, 49, 0.14);
+      }
+      .tw-machine-row-recent {
+        border-color: rgba(9, 132, 227, 0.18) !important;
+        box-shadow: inset 0 0 0 1px rgba(9, 132, 227, 0.12);
+      }
 
       .tw-machine-label {
         min-width: 120px;
@@ -427,12 +483,29 @@
       .tw-machine-monitor.small .tw-machine-monitor-empty { font-size: 8px; }
       .tw-machine-monitor-time {
         position: absolute;
-        bottom: 3px;
-        right: 6px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        justify-content: flex-end;
+        align-items: flex-end;
+        padding: 10px 6px 4px;
         font-size: 8px;
-        color: #5f7469;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: #dcefe3;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+        background: linear-gradient(180deg, rgba(4, 12, 9, 0) 0%, rgba(4, 12, 9, 0.82) 100%);
+        pointer-events: none;
       }
-      .tw-machine-monitor.small .tw-machine-monitor-time { font-size: 5px; }
+      .tw-machine-monitor.small .tw-machine-monitor-time {
+        font-size: 5px;
+        padding: 7px 4px 3px;
+      }
+      .tw-machine-monitor.expanded .tw-machine-monitor-time {
+        font-size: 9px;
+        padding: 12px 8px 5px;
+      }
       .tw-multi-monitor {
         display: flex;
         height: 100%;
@@ -527,6 +600,42 @@
         font-size: 12px;
         color: var(--muted);
       }
+      .tw-machine-route {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .tw-machine-route-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2px 7px;
+        border-radius: 999px;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .tw-machine-route-badge.lan {
+        background: rgba(26, 127, 90, 0.14);
+        color: #2d6a4f;
+      }
+      .tw-machine-route-badge.hybrid {
+        background: linear-gradient(135deg, rgba(26, 127, 90, 0.16), rgba(9, 132, 227, 0.16));
+        color: #1f5f7a;
+      }
+      .tw-machine-route-badge.tailscale {
+        background: rgba(9, 132, 227, 0.14);
+        color: #2471a3;
+      }
+      .tw-machine-route-target {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
       .tw-machine-statuses {
         display: flex;
         flex-wrap: wrap;
@@ -560,6 +669,47 @@
       .tw-machine-status-off {
         background: rgba(95, 116, 105, 0.14);
         color: #6d8175;
+      }
+      .tw-machine-watchdog {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .tw-watchdog-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        line-height: 1.2;
+        border: 1px solid transparent;
+        background: rgba(26, 127, 90, 0.12);
+        color: #81c995;
+      }
+      .tw-watchdog-chip.pending {
+        background: rgba(214, 48, 49, 0.14);
+        border-color: rgba(214, 48, 49, 0.24);
+        color: #ffb4b4;
+      }
+      .tw-watchdog-chip.auto-approved {
+        background: rgba(9, 132, 227, 0.14);
+        border-color: rgba(9, 132, 227, 0.24);
+        color: #a5d8ff;
+      }
+      .tw-watchdog-chip.cooldown {
+        background: rgba(195, 139, 45, 0.16);
+        border-color: rgba(195, 139, 45, 0.24);
+        color: #ffd38f;
+      }
+      .tw-watchdog-chip-label {
+        white-space: nowrap;
+      }
+      .tw-watchdog-chip-time {
+        opacity: 0.8;
       }
 
       .tw-group-title {
@@ -670,7 +820,40 @@
       }
       .tw-machine-input::placeholder { color: rgba(0,255,70,0.3) !important; }
       .tw-machine-row { border-color: rgba(0,255,70,0.08) !important; }
+      .tw-machine-row-alert {
+        border-color: rgba(214,48,49,0.28) !important;
+        box-shadow: inset 0 0 0 1px rgba(214,48,49,0.18) !important;
+      }
+      .tw-machine-row-recent {
+        border-color: rgba(9,132,227,0.24) !important;
+        box-shadow: inset 0 0 0 1px rgba(9,132,227,0.16) !important;
+      }
       .tw-auto-badge { background: rgba(0,255,70,0.1) !important; color: #00ff46 !important; }
+      .tw-auto-badge-live { background: rgba(214,48,49,0.18) !important; color: #ffb4b4 !important; }
+      .tw-watchdog-overview { border-color: rgba(0,255,70,0.16) !important; }
+      .tw-watchdog-overview.hot {
+        border-color: rgba(214,48,49,0.3) !important;
+        background: linear-gradient(135deg, rgba(48, 8, 12, 0.78), rgba(10, 20, 15, 0.82)) !important;
+      }
+      .tw-watchdog-overview.recent {
+        border-color: rgba(9,132,227,0.28) !important;
+        background: linear-gradient(135deg, rgba(6, 22, 36, 0.8), rgba(10, 20, 15, 0.82)) !important;
+      }
+      .tw-watchdog-chip.pending {
+        background: rgba(214,48,49,0.18) !important;
+        border-color: rgba(214,48,49,0.28) !important;
+        color: #ffb4b4 !important;
+      }
+      .tw-watchdog-chip.auto-approved {
+        background: rgba(9,132,227,0.18) !important;
+        border-color: rgba(9,132,227,0.28) !important;
+        color: #a5d8ff !important;
+      }
+      .tw-watchdog-chip.cooldown {
+        background: rgba(195,139,45,0.2) !important;
+        border-color: rgba(195,139,45,0.28) !important;
+        color: #ffd38f !important;
+      }
       .tw-watchdog-section { color: #5a9a6a; }
 
       .hero-inner {
@@ -742,7 +925,7 @@
       <header class="hero">
         <div class="hero-inner">
           <div class="hero-text">
-            <p class="eyebrow">Control remoto — v2.5.0</p>
+            <p class="eyebrow">Control remoto — v2.5.2</p>
             <h1>AdmiraNext Control</h1>
             <p class="subtitle">Opera por separado el Consejo de Administracion en Mac y el Equipo en PC desde un mismo panel.</p>
           </div>
@@ -786,6 +969,7 @@
             <div class="tw-approve-result tw-inline-result" id="approveCodexResult"></div>
             <div class="tw-approve-result tw-inline-result" id="approveClaudeResult"></div>
           </div>
+          <div class="tw-watchdog-overview" id="watchdogOverview"></div>
           <p style="margin:10px 0 0;color:var(--muted);font-size:12px;">`onboarding` es local para esta sesion. `onboarding all` refresca consejo y equipo alcanzables usando una sola IA por maquina.</p>
         </div>
         <div class="tw-feedback" id="feedback"></div>
@@ -803,10 +987,10 @@
     </main>
 
       <footer style="text-align:center;padding:24px 0 8px;color:var(--muted);font-size:12px;">
-          AdmiraNext Control v2.5.0 — 2026-04-01
+          AdmiraNext Control v2.5.3 — 2026-04-03
       </footer>
 
-      <script src="./teamwork.js?v=20260401-4" type="module"></script>
+      <script src="./teamwork.js?v=20260403-1" type="module"></script>
     <script>
       (function() {
         const c = document.getElementById("matrixCanvas");

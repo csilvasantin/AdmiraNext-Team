@@ -25,6 +25,20 @@ function normalizeToken(value) {
     .replace(/^-+|-+$/g, "");
 }
 
+function normalizeLanHost(value) {
+  const trimmed = cleanString(value).toLowerCase();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(trimmed) || trimmed.includes(".")) {
+    return trimmed;
+  }
+
+  const normalized = normalizeToken(trimmed);
+  return normalized ? `${normalized}.local` : "";
+}
+
 function buildHost(alias, tailnet) {
   const normalizedAlias = normalizeToken(alias);
   if (!normalizedAlias) {
@@ -63,6 +77,23 @@ function buildConnectCommand({ enabled, sshUser, tailscaleIp, hostAlias }) {
 
   if (hostAlias) {
     return `ssh -o ProxyCommand='tailscale nc %h %p' ${sshUser}@${hostAlias}`;
+  }
+
+  return "";
+}
+
+function buildLanConnectCommand({ enabled, sshUser, lanIp, lanHost, hostAlias }) {
+  if (!enabled || !sshUser) {
+    return "";
+  }
+
+  if (lanIp) {
+    return `ssh ${sshUser}@${lanIp}`;
+  }
+
+  const localHost = normalizeLanHost(lanHost) || (hostAlias ? `${normalizeToken(hostAlias)}.local` : "");
+  if (localHost) {
+    return `ssh ${sshUser}@${localHost}`;
   }
 
   return "";
@@ -162,6 +193,8 @@ export async function createMachineEntry(payload) {
   const sshUser = cleanString(payload.sshUser, "csilvasantin");
   const hostAlias = normalizeToken(payload.hostAlias);
   const tailscaleIp = cleanString(payload.tailscaleIp);
+  const lanIp = cleanString(payload.lanIp);
+  const lanHost = normalizeLanHost(payload.lanHost);
   const tailnet = cleanString(data.tailnet);
   const tailscaleHost = buildHost(hostAlias, tailnet);
   const remoteReady = Boolean(payload.remoteReady);
@@ -206,6 +239,9 @@ export async function createMachineEntry(payload) {
       user: sshUser,
       host: tailscaleHost,
       ip_tailscale: tailscaleIp,
+      ip_lan: lanIp,
+      host_local: lanHost,
+      connect_lan: buildLanConnectCommand({ enabled: remoteReady, sshUser, lanIp, lanHost, hostAlias }),
       connect_tailscale: buildConnectCommand({ enabled: remoteReady, sshUser, tailscaleIp, hostAlias }),
       hostAlias
     },

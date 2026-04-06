@@ -92,6 +92,63 @@ http://127.0.0.1:3030/control.html
 
 Si ese Mac publica el hub por Tailscale Funnel, valida tambien la URL publica con cache-buster.
 
+## Arquitectura LAN de capturas
+
+Desde abril de 2026 el flujo operativo recomendado en LAN queda asi:
+
+1. el `Mac Mini` actua como hub central en `:3030`;
+2. cada Mac remoto que deba publicar captura real corre su propio `LaunchAgent` GUI en `~/AdmiraNext-Control-Agent`;
+3. el hub intenta leer primero `http://127.0.0.1:3030/api/teamwork/snapshots` dentro de cada Mac remoto;
+4. si ese nodo GUI remoto responde, el hub reutiliza esa captura real de la sesion `Aqua`;
+5. solo si el nodo GUI no responde, el hub cae al fallback SSH con `Quartz` o a texto.
+
+Reglas importantes:
+
+1. el modo multi-monitor fijo solo aplica al `Mac Mini` hub;
+2. los portatiles locales o remotos publican una sola imagen de su pantalla real;
+3. el panel no borra un preview bueno hasta tener otro visual nuevo;
+4. cuando un equipo remoto tarda en responder, el hub reintenta rapido para no dejarlo oculto demasiado tiempo.
+
+Rutas y piezas clave:
+
+1. hub central: [src/ssh-exec.js](./src/ssh-exec.js)
+2. instalador de nodo GUI: [ops/macos/install-launchagent.sh](./ops/macos/install-launchagent.sh)
+3. doctor de permisos GUI: [ops/macos/doctor-gui-capture.sh](./ops/macos/doctor-gui-capture.sh)
+
+## Watchdog y autoaprobaciones
+
+El watchdog del panel intenta detectar y aprobar permisos pendientes sin depender de una sola app.
+
+Fuentes que vigila:
+
+1. `Claude Desktop` por botones nativos y botones dentro del webview;
+2. `Codex` app por titulo de ventana y texto de la propia app;
+3. `Claude Code` en `Terminal` o `iTerm2`;
+4. `Codex CLI` en `Terminal` o `iTerm2`.
+
+Acciones de autoaprobacion:
+
+1. `Claude Desktop`: `Ctrl+Enter`
+2. `Codex` app: `2` + `Enter`
+3. `Claude Code` en terminal: activa el terminal correcto y envia `Ctrl+Enter`
+4. `Codex CLI` en terminal: activa el terminal correcto y envia `2` + `Enter`
+
+Notas operativas:
+
+1. distinguir `Codex` app de `Codex CLI` es importante porque el gesto de aprobacion y la app destino no son los mismos;
+2. el watchdog guarda contadores por maquina y el ultimo objetivo aprobado;
+3. cada deteccion positiva dispara un sonido corto estilo Mario desde el hub central, con firma distinta para `Claude` y `Codex`;
+4. si una maquina falla temporalmente, el sistema no la castiga durante minutos: reintenta en ciclos cortos para recuperar el control LAN enseguida.
+
+Endpoint utiles:
+
+```text
+GET /api/teamwork/snapshots
+GET /api/teamwork/watchdog
+POST /api/teamwork/watchdog
+POST /api/teamwork/watchdog/machine
+```
+
 ## API local
 
 ### Listar máquinas

@@ -629,6 +629,16 @@
               </div>
 
               <div class="field">
+                <label for="lanHost">Host LAN / Bonjour</label>
+                <input id="lanHost" name="lanHost" type="text" placeholder="Ej. macbookairmaria.local">
+              </div>
+
+              <div class="field">
+                <label for="lanIp">IP LAN</label>
+                <input id="lanIp" name="lanIp" type="text" placeholder="Ej. 192.168.1.42">
+              </div>
+
+              <div class="field">
                 <label for="sshUser">Usuario SSH</label>
                 <input id="sshUser" name="sshUser" type="text" value="csilvasantin" placeholder="csilvasantin">
               </div>
@@ -825,8 +835,8 @@
               <div class="setup-step">
                 <div class="setup-step-num">9</div>
                 <div>
-                  <strong>Instalar Python y ejecutar el setup de bots</strong>
-                  <span>En Mac nuevo, necesitamos Python 3.11+ y luego ejecutar <code>./setup_admira_next_bots_mac.sh</code> desde onboarding.</span>
+                  <strong>Instalar Python, preview remoto y bots</strong>
+                  <span>El alta express deja Python operativo, instala las dependencias de captura remota compatibles con ese Mac y luego ejecuta <code>./setup_admira_next_bots_mac.sh</code> desde onboarding.</span>
                 </div>
               </div>
 
@@ -847,6 +857,7 @@
             <div class="bootstrap-pill-row">
               <span class="mini-pill ok">automatiza Homebrew</span>
               <span class="mini-pill ok">instala Chrome, `gh`, Python y Tailscale</span>
+              <span class="mini-pill ok">prepara el preview remoto de pantalla</span>
               <span class="mini-pill ok">fuerza Claude y Codex como paso obligatorio</span>
               <span class="mini-pill ok">pone Chrome por defecto</span>
               <span class="mini-pill warn">requiere login manual en GitHub, Tailscale, Claude y Codex</span>
@@ -936,6 +947,6 @@
       <option value="Equipo de respaldo"></option>
     </datalist>
 
-    <script src="./new-member.js?v=20260331-1" type="module"></script>
+    <script src="./new-member.js?v=20260402-3" type="module"></script>
   </body>
 </html>

@@ -4,7 +4,7 @@ import { extname, resolve } from "node:path";
 
 import { createMachineEntry, readMachines, updateMachineStatus, updateMachineSync } from "./store.js";
 import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog } from "./ssh-exec.js";
-import { addEntry, getHistory } from "./teamwork-store.js";
+import { addEntries, addEntry, getHistory } from "./teamwork-store.js";
 
 const PORT = 3030;
 const HOST = "0.0.0.0";
@@ -45,6 +45,21 @@ const DEFAULT_ONBOARDING_PROMPT =
 function sendJson(response, statusCode, payload) {
   response.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8", ...CORS_HEADERS });
   response.end(JSON.stringify(payload));
+}
+
+function addHistoryFromResults(results, { prompt, target, action }) {
+  return addEntries(
+    results.map((result) => ({
+      machineId: result.id || result.machine || `${action}-${target || "system"}`,
+      machineName: result.machine || result.name || result.id || "Sistema",
+      prompt,
+      ok: result.ok,
+      error: result.error,
+      captureId: result.captureId,
+      target: result.target || (action === "onboarding-all" ? "auto" : target || "terminal"),
+      action
+    }))
+  );
 }
 
 async function serveStatic(pathname, response) {
@@ -211,17 +226,38 @@ const server = createServer(async (request, response) => {
 
     const reachable = await getReachableMachines();
     const targets = target === "all" ? ["claude", "codex"] : [target];
+    const tasks = reachable.flatMap((machine) =>
+      targets.map((selectedTarget) => ({
+        machine,
+        target: selectedTarget
+      }))
+    );
     const results = await Promise.allSettled(
-      reachable.flatMap((machine) =>
-        targets.map((t) => sendPromptToMachine(machine.id, prompt, t))
-      )
+      tasks.map(({ machine, target: selectedTarget }) => sendPromptToMachine(machine.id, prompt, selectedTarget))
     );
 
-    const output = results.map((r) => {
-      const v = r.value || { ok: false, error: "rejected" };
-      return { machine: v.name || v.machine, ok: v.ok, error: v.error };
+    const output = results.map((entry, index) => {
+      const task = tasks[index];
+      if (entry.status === "fulfilled") {
+        const value = entry.value;
+        return {
+          ...value,
+          id: task.machine.id,
+          machine: value.name || value.machine || task.machine.name,
+          target: task.target
+        };
+      }
+
+      return {
+        id: task.machine.id,
+        machine: task.machine.name,
+        ok: false,
+        error: entry.reason instanceof Error ? entry.reason.message : "rejected",
+        target: task.target
+      };
     });
-    sendJson(response, 200, { ok: true, results: output });
+    const entries = addHistoryFromResults(output, { prompt, target, action: "send-all" });
+    sendJson(response, 200, { ok: true, results: output, entries });
     return;
   }
 
@@ -230,7 +266,8 @@ const server = createServer(async (request, response) => {
     const parsed = rawBody ? JSON.parse(rawBody) : {};
     const prompt = parsed.prompt?.trim() || DEFAULT_ONBOARDING_PROMPT;
     const results = await sendOnboardingToAll(prompt);
-    sendJson(response, 200, { ok: true, prompt, results });
+    const entries = addHistoryFromResults(results, { prompt, action: "onboarding-all" });
+    sendJson(response, 200, { ok: true, prompt, results, entries });
     return;
   }
 
@@ -239,7 +276,12 @@ const server = createServer(async (request, response) => {
     const parsed = rawBody ? JSON.parse(rawBody) : {};
     const target = parsed.target || "claude";
     const results = await approveAll(target);
-    sendJson(response, 200, { ok: true, results });
+    const entries = addHistoryFromResults(results, {
+      prompt: `Aprobar ${target === "codex" ? "Codex" : "Claude"}`,
+      target,
+      action: "approve-all"
+    });
+    sendJson(response, 200, { ok: true, results, entries });
     return;
   }
 
@@ -252,7 +294,18 @@ const server = createServer(async (request, response) => {
       return;
     }
     const result = await approveMachine(machineId, target || "claude");
-    sendJson(response, 200, result);
+    const entry = addEntries([
+      {
+        machineId: result.id || machineId,
+        machineName: result.machine || machineId,
+        prompt: `Aprobar ${(target || "claude") === "codex" ? "Codex" : "Claude"}`,
+        ok: result.ok,
+        error: result.error,
+        target: target || "claude",
+        action: "approve-machine"
+      }
+    ])[0];
+    sendJson(response, 200, { ...result, entry });
     return;
   }
 
