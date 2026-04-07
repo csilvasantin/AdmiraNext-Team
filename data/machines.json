@@ -101,15 +101,16 @@
       "machineRole": "Equipo principal",
       "location": "Madrid",
       "platform": "macOS",
-      "status": "offline",
-      "lastSeen": "2026-03-23T20:50:00Z",
-      "currentFocus": "Offline — ultima conexion hace minutos",
-      "note": "Tailscale: macbookairluna.tail48b61c.ts.net",
+      "status": "online",
+      "lastSeen": "2026-04-07T12:00:00Z",
+      "currentFocus": "Tailscale CLI activo — doble instancia (app + cli)",
+      "note": "Tailscale app: macbookairluna (100.98.68.63) | Tailscale CLI: macbookairluna-1 (100.71.252.58)",
       "ssh": {
         "enabled": true,
         "user": "csilvasantin",
         "host": "macbookairluna.tail48b61c.ts.net",
         "ip_tailscale": "100.98.68.63",
+        "ip_tailscale_cli": "100.71.252.58",
         "connect_tailscale": "ssh csilvasantin@100.98.68.63"
       }
     },
