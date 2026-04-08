@@ -28,10 +28,10 @@
     {
       "id": "admira-macbookairnines",
       "unitType": "council",
-      "color": "plata",
+      "color": "crema",
       "member": "Nines",
-      "role": "Operaciones",
-      "name": "MacBook Air Nines",
+      "role": "COO (Chief Operations Officer)",
+      "name": "MacBook Air Crema (Nines)",
       "machineRole": "Equipo activo",
       "location": "Madrid",
       "platform": "macOS",
