@@ -985,12 +985,14 @@ export async function sleepMachine(machine) {
     return { ok: false, error: "Sin SSH configurado" };
   }
   const sshArgs = buildSshArgs(machine, false);
+  // Usar displaysleepnow en vez de sleepnow: apaga pantalla pero mantiene
+  // WiFi y SSH activos, permitiendo wake remoto con caffeinate -u
   return new Promise((resolve) => {
-    execFile("ssh", [...sshArgs, "pmset sleepnow"], { timeout: 8000 }, (error) => {
+    execFile("ssh", [...sshArgs, "pmset displaysleepnow"], { timeout: 8000 }, (error) => {
       if (error) {
         resolve({ ok: false, error: error.message?.slice(0, 120) || "SSH error" });
       } else {
-        resolve({ ok: true, message: "Sleep enviado" });
+        resolve({ ok: true, message: "Display sleep enviado" });
       }
     });
   });
