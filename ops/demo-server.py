@@ -37,7 +37,7 @@ status_overrides = {}
 
 TAILSCALE_TO_ID = {
     "macmini":              "admira-macmini",
-    "macbookairnines":      "admira-macbookairnines",
+    "macbookaircrema":      "admira-macbook-carla",
     "macbookpronegro14":    "admira-macbookpronegro14",
     "macbookair16":         "admira-macbookair16",
     "macbookairluna":       "admira-macbookairluna",

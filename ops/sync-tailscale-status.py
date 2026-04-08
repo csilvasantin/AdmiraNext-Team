@@ -21,11 +21,10 @@ MACHINES_PATH = Path(__file__).resolve().parent.parent / "data" / "machines.json
 # Mapeo hostname Tailscale -> machine id en machines.json
 TAILSCALE_TO_ID = {
     "macmini":            "admira-macmini",
-    "macbookairnines":    "admira-macbookairnines",
+    "macbookaircrema":    "admira-macbook-carla",
     "macbookpronegro14":  "admira-macbookpronegro14",
     "macbookair16":       "admira-macbookair16",
     "macbookairluna":     "admira-macbookairluna",
-    "macbook-air-de-carla": "admira-macbook-carla",
     "macbookairblanco":   "admira-macbookairblanco",
     "macbookairplata":    "admira-macbookairplata",
     "macbookairazul":     "admira-macbookairazul",
