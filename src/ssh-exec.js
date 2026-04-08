@@ -1003,6 +1003,17 @@ export async function wakeMachine(machine) {
   }
   try {
     await sendWol(mac);
+    // Esperar a que despierte y encender la pantalla con caffeinate
+    setTimeout(() => {
+      const user = machine.ssh?.user || "csilvasantin";
+      const ip = machine.ssh?.ip_tailscale || machine.ssh?.host;
+      if (ip) {
+        execFile("ssh", [
+          "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=no",
+          `${user}@${ip}`, "caffeinate -u -t 5"
+        ], { timeout: 20000 }, () => {});
+      }
+    }, 8000);
     return { ok: true, message: `WoL enviado a ${mac}` };
   } catch (e) {
     return { ok: false, error: e.message?.slice(0, 120) || "WoL error" };
