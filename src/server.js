@@ -169,6 +169,51 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  // Power control: sleep/wake machines via SSH
+  if (request.method === "POST" && url.pathname.startsWith("/api/machines/") && url.pathname.endsWith("/power")) {
+    const parts = url.pathname.split("/");
+    const id = parts[3];
+    const rawBody = await readRequestBody(request);
+    const parsed = rawBody ? JSON.parse(rawBody) : {};
+    const action = parsed.action; // "sleep" or "wake"
+
+    if (!action || !["sleep", "wake"].includes(action)) {
+      sendJson(response, 400, { error: "Invalid action. Use 'sleep' or 'wake'" });
+      return;
+    }
+
+    // Protect Mac Mini from accidental sleep
+    if (id === "admira-macmini") {
+      sendJson(response, 403, { error: "Cannot sleep the central server" });
+      return;
+    }
+
+    // Resolve machine SSH details
+    const machines = await readMachines();
+    const machine = machines.machines?.find(m => m.id === id);
+    if (!machine?.ssh?.ip_tailscale) {
+      sendJson(response, 404, { error: "Machine not found or no SSH config" });
+      return;
+    }
+
+    const user = machine.ssh.user || "csilvasantin";
+    const ip = machine.ssh.ip_tailscale;
+    const cmd = action === "sleep" ? "pmset sleepnow" : "caffeinate -u -t 5";
+
+    const { execFile } = await import("node:child_process");
+    const result = await new Promise((resolve_) => {
+      execFile("ssh", [
+        "-o", "ConnectTimeout=5", "-o", "StrictHostKeyChecking=no",
+        `${user}@${ip}`, cmd
+      ], { timeout: 15000 }, (err, stdout, stderr) => {
+        resolve_({ ok: !err, stdout, stderr: stderr || err?.message });
+      });
+    });
+
+    sendJson(response, 200, { ok: result.ok, machine: id, action, detail: result.stdout || result.stderr });
+    return;
+  }
+
   if (request.method === "POST" && url.pathname.startsWith("/api/machines/") && url.pathname.endsWith("/sync")) {
     const parts = url.pathname.split("/");
     const id = parts[3];
