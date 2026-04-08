@@ -207,8 +207,21 @@ class Handler(BaseHTTPRequestHandler):
             print(f"[DEMO] {self.address_string()} {format % args}")
 
 
+class ThreadedHTTPServer(HTTPServer):
+    """Handle each request in a separate thread."""
+    from socketserver import ThreadingMixIn
+    pass
+
+# Apply mixin dynamically
+from socketserver import ThreadingMixIn
+
+class ThreadedServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
+
+
 if __name__ == "__main__":
     print(f"Demo server en http://localhost:{PORT}/status")
     print("La pagina admiranext.html consulta este endpoint en modo DEMO.")
+    print("Multithreaded: las capturas SSH no bloquean el servidor.")
     print("Ctrl+C para parar.\n")
-    HTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+    ThreadedServer(("127.0.0.1", PORT), Handler).serve_forever()
