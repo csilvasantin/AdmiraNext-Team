@@ -1,6 +1,6 @@
 {
   "team": "AdmiraNext Team",
-  "updatedAt": "2026-04-08T12:03:03Z",
+  "updatedAt": "2026-04-08T12:09:02Z",
   "tailnet": "tail48b61c.ts.net",
   "machines": [
     {
@@ -13,9 +13,9 @@
       "machineRole": "Servidor central / Hub",
       "location": "Madrid",
       "platform": "macOS",
-      "status": "offline",
-      "lastSeen": "2026-04-08T11:53:02Z",
-      "currentFocus": "Offline — ultima conexion hace 3m ago",
+      "status": "online",
+      "lastSeen": "2026-04-08T12:09:02Z",
+      "currentFocus": "Online — detectado por Tailscale",
       "note": "Tailscale: macmini.tail48b61c.ts.net",
       "ssh": {
         "enabled": true,
@@ -124,9 +124,9 @@
       "machineRole": "Equipo activo",
       "location": "Madrid",
       "platform": "macOS",
-      "status": "offline",
-      "lastSeen": "2026-04-08T12:03:03Z",
-      "currentFocus": "Offline — ultima conexion hace 3m ago",
+      "status": "online",
+      "lastSeen": "2026-04-08T12:09:02Z",
+      "currentFocus": "Online — detectado por Tailscale",
       "note": "Tailscale: macbook-air-de-carla.tail48b61c.ts.net",
       "ssh": {
         "enabled": true,
