@@ -172,18 +172,42 @@ def get_machine_ip(machine_id):
     return None
 
 
+def _is_blank_image(jpeg_bytes):
+    """Detecta si un JPEG es una pantalla en blanco/negro (bloqueada o screensaver).
+    Analiza una muestra de bytes del cuerpo JPEG: si la varianza es muy baja,
+    la imagen es casi monocromatica = pantalla bloqueada."""
+    # Heuristica rapida: comprimir una pantalla solida produce JPEGs pequenos
+    if len(jpeg_bytes) < 8000:
+        return True
+    # Muestra bytes del centro del fichero (evita cabeceras JPEG)
+    start = len(jpeg_bytes) // 4
+    sample = jpeg_bytes[start:start + 2000]
+    if not sample:
+        return True
+    avg = sum(sample) / len(sample)
+    variance = sum((b - avg) ** 2 for b in sample) / len(sample)
+    # Imagenes reales tienen varianza alta; pantallas solidas < 500
+    is_blank = variance < 500
+    return is_blank
+
+
+# Cache persistente de la ultima captura buena por maquina (no expira)
+last_good_screenshot = {}
+
+
 def capture_screenshot(machine_id):
-    """SSH a un Mac y captura la pantalla via Quartz. Devuelve bytes JPEG o None."""
-    # Check cache
+    """SSH a un Mac y captura la pantalla via Quartz. Devuelve bytes JPEG o None.
+    Si la captura es una pantalla bloqueada/screensaver, devuelve la ultima buena."""
+    # Check TTL cache
     cached = screenshot_cache.get(machine_id)
     if cached and (time.time() - cached[0]) < CACHE_TTL:
         return cached[1]
 
     ip = get_machine_ip(machine_id)
     if not ip:
-        return None
+        return last_good_screenshot.get(machine_id)
 
-    # One-liner: Quartz capture → sips resize → base64 → stdout
+    # One-liner: Quartz capture -> sips resize -> base64 -> stdout
     remote_cmd = (
         "python3 -c '"
         "import Quartz,sys;"
@@ -213,20 +237,27 @@ def capture_screenshot(machine_id):
         raw = result.stdout.strip()
         if not raw:
             print(f"[SCREENSHOT] {machine_id}: empty (rc={result.returncode}) {result.stderr[:100]}")
-            return None
+            return last_good_screenshot.get(machine_id)
 
         jpeg_bytes = base64.b64decode(raw)
         if len(jpeg_bytes) < 1000:
             print(f"[SCREENSHOT] {machine_id}: too small ({len(jpeg_bytes)}B)")
-            return None
+            return last_good_screenshot.get(machine_id)
 
+        if _is_blank_image(jpeg_bytes):
+            print(f"[SCREENSHOT] {machine_id}: blank/locked screen detected ({len(jpeg_bytes)//1024}KB), keeping last good")
+            screenshot_cache[machine_id] = (time.time(), last_good_screenshot.get(machine_id, jpeg_bytes))
+            return last_good_screenshot.get(machine_id, jpeg_bytes)
+
+        # Captura buena: guardar en ambos caches
         screenshot_cache[machine_id] = (time.time(), jpeg_bytes)
+        last_good_screenshot[machine_id] = jpeg_bytes
         print(f"[SCREENSHOT] {machine_id}: OK ({len(jpeg_bytes)//1024}KB)")
         return jpeg_bytes
 
     except Exception as e:
         print(f"[SCREENSHOT] {machine_id}: error {e}")
-        return None
+        return last_good_screenshot.get(machine_id)
 
 
 class Handler(BaseHTTPRequestHandler):
