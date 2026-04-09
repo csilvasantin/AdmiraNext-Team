@@ -56,6 +56,7 @@ TAILSCALE_TO_ID = {
     "macbookaircrema-1":    "admira-macbookaircrema",
     "macbookairblanco":     "admira-macbookairblanco",
     "macbookairplata":      "admira-macbookairplata",
+    "macbookairplata-1":    "admira-macbookairplata",
     "macbookairazul":       "admira-macbookairazul",
 }
 
