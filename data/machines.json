@@ -1,6 +1,6 @@
 {
   "team": "AdmiraNext Team",
-  "updatedAt": "2026-04-09T09:39:10Z",
+  "updatedAt": "2026-04-09T09:41:09Z",
   "tailnet": "tail48b61c.ts.net",
   "machines": [
     {
@@ -184,9 +184,9 @@
       "machineRole": "Equipo compartido del consejo",
       "location": "Madrid",
       "platform": "macOS",
-      "status": "online",
-      "lastSeen": "2026-04-09T09:39:10Z",
-      "currentFocus": "Online — detectado por Tailscale",
+      "status": "offline",
+      "lastSeen": "2026-04-09T09:41:09Z",
+      "currentFocus": "Offline — ultima conexion hace 1m ago",
       "note": "8o Mac del consejo. Equipo rotatorio sin persona fija. Tailscale y SSH operativos.",
       "ssh": {
         "enabled": true,
@@ -325,9 +325,9 @@
       "machineRole": "Direccion creativa",
       "location": "Madrid",
       "platform": "macOS",
-      "status": "online",
-      "lastSeen": "2026-04-09T09:39:10Z",
-      "currentFocus": "Online — detectado por Tailscale",
+      "status": "offline",
+      "lastSeen": "2026-04-09T09:41:09Z",
+      "currentFocus": "Offline — ultima conexion hace 1m ago",
       "note": "Tailscale: macbookairazul (100.84.81.45)",
       "ssh": {
         "enabled": true,
