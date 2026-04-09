@@ -1,6 +1,6 @@
 {
   "team": "AdmiraNext Team",
-  "updatedAt": "2026-04-09T09:57:09Z",
+  "updatedAt": "2026-04-09T11:57:12Z",
   "tailnet": "tail48b61c.ts.net",
   "machines": [
     {
@@ -124,9 +124,9 @@
       "machineRole": "Equipo activo",
       "location": "Madrid",
       "platform": "macOS",
-      "status": "online",
-      "lastSeen": "2026-04-08T12:39:05Z",
-      "currentFocus": "Online — detectado por Tailscale",
+      "status": "offline",
+      "lastSeen": "2026-04-09T11:57:12Z",
+      "currentFocus": "Offline — ultima conexion hace 1m ago",
       "note": "Tailscale: macbook-air-de-carla.tail48b61c.ts.net",
       "ssh": {
         "enabled": true,
