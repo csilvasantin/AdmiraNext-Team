@@ -1,6 +1,6 @@
 {
   "team": "AdmiraNext Team",
-  "updatedAt": "2026-04-08T19:54:34.957Z",
+  "updatedAt": "2026-04-09T08:49:36Z",
   "tailnet": "tail48b61c.ts.net",
   "machines": [
     {
@@ -14,8 +14,8 @@
       "location": "Madrid",
       "platform": "macOS",
       "status": "online",
-      "lastSeen": "2026-03-23T21:00:00Z",
-      "currentFocus": "Hub SSH — controla todos los equipos remotamente",
+      "lastSeen": "2026-04-09T08:49:36Z",
+      "currentFocus": "Online — detectado por Tailscale",
       "note": "Tailscale: macmini.tail48b61c.ts.net",
       "ssh": {
         "enabled": true,
@@ -29,15 +29,15 @@
       "id": "admira-macbookairnines",
       "unitType": "council",
       "color": "plata",
-      "member": "Nines",
-      "role": "Operaciones",
-      "name": "MacBook Air Nines",
+      "member": "Rotatorio",
+      "role": "COO (Chief Operations Officer)",
+      "name": "MacBook Air Plata",
       "machineRole": "Equipo activo",
       "location": "Madrid",
       "platform": "macOS",
       "status": "offline",
-      "lastSeen": "2026-04-08T19:51:24.959Z",
-      "currentFocus": "SSH verificado — accesible desde Mac Mini",
+      "lastSeen": "2026-04-08T11:37:03Z",
+      "currentFocus": "Offline — ultima conexion hace 1m ago",
       "note": "Tailscale: macbookairnines.tail48b61c.ts.net",
       "ssh": {
         "enabled": true,
@@ -57,17 +57,16 @@
       "machineRole": "Equipo de desarrollo",
       "location": "Madrid",
       "platform": "macOS",
-      "status": "offline",
-      "lastSeen": "2026-04-08T19:48:56.875Z",
-      "currentFocus": "SSH verificado — accesible desde Mac Mini",
-      "note": "Sleep enviado desde dashboard",
+      "status": "online",
+      "lastSeen": "2026-04-09T08:49:36Z",
+      "currentFocus": "Online — detectado por Tailscale",
+      "note": "Tailscale: macbookpronegro14.tail48b61c.ts.net",
       "ssh": {
         "enabled": true,
         "user": "csilvasantin",
         "host": "macbookpronegro14.tail48b61c.ts.net",
         "ip_tailscale": "100.101.192.1",
-        "connect_tailscale": "ssh -o ProxyCommand='tailscale nc %h %p' csilvasantin@macbookpronegro14",
-        "mac": "92:a2:4f:70:35:c7"
+        "connect_tailscale": "ssh -o ProxyCommand='tailscale nc %h %p' csilvasantin@macbookpronegro14"
       }
     },
     {
@@ -80,10 +79,10 @@
       "machineRole": "Direccion",
       "location": "Madrid",
       "platform": "macOS",
-      "status": "offline",
-      "lastSeen": "2026-04-08T19:54:34.957Z",
-      "currentFocus": "SSH verificado — accesible desde Mac Mini (user: Carlos)",
-      "note": "Sleep enviado desde dashboard",
+      "status": "online",
+      "lastSeen": "2026-04-08T09:43:01Z",
+      "currentFocus": "Online — detectado por Tailscale",
+      "note": "Tailscale: macbookair16.tail48b61c.ts.net",
       "ssh": {
         "enabled": true,
         "user": "csilvasantin",
@@ -103,102 +102,39 @@
       "location": "Madrid",
       "platform": "macOS",
       "status": "offline",
-      "lastSeen": "2026-03-23T20:50:00Z",
-      "currentFocus": "Offline — ultima conexion hace minutos",
-      "note": "Tailscale: macbookairluna.tail48b61c.ts.net",
+      "lastSeen": "2026-04-08T09:19:17Z",
+      "currentFocus": "Offline — ultima conexion hace 1d ago",
+      "note": "Tailscale app: macbookairluna (100.98.68.63) | Tailscale CLI: macbookairluna-1 (100.71.252.58)",
       "ssh": {
         "enabled": true,
         "user": "csilvasantin",
         "host": "macbookairluna.tail48b61c.ts.net",
         "ip_tailscale": "100.98.68.63",
+        "ip_tailscale_cli": "100.71.252.58",
         "connect_tailscale": "ssh csilvasantin@100.98.68.63"
       }
     },
     {
-      "id": "admira-macbookaircrema",
+      "id": "admira-macbook-carla",
       "unitType": "council",
       "color": "crema",
-      "member": "CSO",
-      "role": "Chief Storytelling Officer",
-      "name": "MacBook Air Crema (CSO)",
+      "member": "Rotatorio",
+      "role": "CSO (Chief Storytelling Officer)",
+      "name": "MacBook Air Crema",
       "machineRole": "Equipo activo",
       "location": "Madrid",
       "platform": "macOS",
-      "status": "offline",
-      "lastSeen": "2026-04-06T20:45:26.390Z",
-      "currentFocus": "Tailscale conectado — idle",
-      "note": "Tailscale: macbookaircrema.tail48b61c.ts.net",
+      "status": "online",
+      "lastSeen": "2026-04-08T12:39:05Z",
+      "currentFocus": "Online — detectado por Tailscale",
+      "note": "Tailscale: macbook-air-de-carla.tail48b61c.ts.net",
       "ssh": {
         "enabled": true,
         "user": "csilvasantin",
-        "host": "macbookaircrema.tail48b61c.ts.net",
+        "host": "macbook-air-de-carla.tail48b61c.ts.net",
         "ip_tailscale": "100.110.80.2",
         "connect_tailscale": "ssh csilvasantin@100.110.80.2"
       }
-    },
-    {
-      "id": "admira-macbookairplata",
-      "unitType": "council",
-      "color": "plata",
-      "member": "COO",
-      "role": "Chief Operations Officer",
-      "name": "MacBook Air Plata (COO)",
-      "machineRole": "Operaciones",
-      "location": "Madrid",
-      "platform": "macOS",
-      "status": "offline",
-      "lastSeen": "2026-04-09T10:00:00Z",
-      "currentFocus": "Consejo operativo",
-      "note": "Tailscale: macbookairplata-1.tail48b61c.ts.net",
-      "ssh": {
-        "enabled": true,
-        "user": "csilvasantin",
-        "host": "macbookairplata-1.tail48b61c.ts.net",
-        "ip_tailscale": "100.114.113.88",
-        "connect_tailscale": "ssh csilvasantin@100.114.113.88"
-      }
-    },
-    {
-      "id": "admira-macbookairazul",
-      "unitType": "council",
-      "color": "azul",
-      "member": "CDO",
-      "role": "Chief Design Officer",
-      "name": "MacBook Air Azul (CDO)",
-      "machineRole": "Diseno",
-      "location": "Madrid",
-      "platform": "macOS",
-      "status": "offline",
-      "lastSeen": "2026-04-09T10:00:00Z",
-      "currentFocus": "Consejo creativo",
-      "note": "Tailscale: macbookairazul.tail48b61c.ts.net",
-      "ssh": {
-        "enabled": true,
-        "user": "csilvasantin",
-        "host": "macbookairazul.tail48b61c.ts.net",
-        "ip_tailscale": "100.84.81.45",
-        "connect_tailscale": "ssh csilvasantin@100.84.81.45"
-      }
-    },
-    {
-      "id": "admira-pctwin",
-      "unitType": "council",
-      "color": "negro",
-      "member": "CXO",
-      "role": "Chief Experience Officer",
-      "name": "AdmiraTwin PC (CXO)",
-      "machineRole": "Experiencia",
-      "location": "Madrid",
-      "platform": "windows",
-      "status": "offline",
-      "lastSeen": "2026-04-09T12:00:00Z",
-      "currentFocus": "Consejo creativo — Windows",
-      "note": "Tailscale: admiratwin.tail48b61c.ts.net",
-      "ssh": {
-        "enabled": false,
-        "ip_tailscale": "100.121.18.12"
-      },
-      "screenshotAgent": "http://100.121.18.12:3033"
     },
     {
       "id": "admira-macbookairblanco",
@@ -210,9 +146,9 @@
       "machineRole": "Direccion",
       "location": "Madrid",
       "platform": "macOS",
-      "status": "offline",
-      "lastSeen": "2026-04-08T19:52:58.106Z",
-      "currentFocus": "Direccion ejecutiva y coordinacion del DreamTeam",
+      "status": "online",
+      "lastSeen": "2026-04-09T08:49:36Z",
+      "currentFocus": "Online — detectado por Tailscale",
       "note": "Tailscale, SSH y GitHub operativos. Chrome, Claude y Codex instalados. ClaudeBot y CodexBot activos. Perfil principal CEO listo para trabajo diario.",
       "ssh": {
         "enabled": true,
@@ -236,6 +172,28 @@
           "codexBotReady": true,
           "needsHelp": "Ninguna. Perfil CEO operativo."
         }
+      }
+    },
+    {
+      "id": "admira-macbookairplata",
+      "unitType": "council",
+      "color": "plata",
+      "member": "Rotatorio",
+      "role": "CSO",
+      "name": "MacBook Air Plata",
+      "machineRole": "Equipo compartido del consejo",
+      "location": "Madrid",
+      "platform": "macOS",
+      "status": "offline",
+      "lastSeen": "2026-04-08T11:59:03Z",
+      "currentFocus": "Offline — ultima conexion hace 1m ago",
+      "note": "8o Mac del consejo. Equipo rotatorio sin persona fija. Tailscale y SSH operativos.",
+      "ssh": {
+        "enabled": true,
+        "user": "csilvasantin",
+        "host": "macbookairplata.tail48b61c.ts.net",
+        "ip_tailscale": "100.76.96.50",
+        "connect_tailscale": "ssh csilvasantin@100.76.96.50"
       }
     },
     {
@@ -355,6 +313,28 @@
         "enabled": true,
         "channel": "windows-local",
         "mode": "desktop-sendkeys"
+      }
+    },
+    {
+      "id": "admira-macbookairazul",
+      "unitType": "council",
+      "color": "azul",
+      "member": "Rotatorio",
+      "role": "CDO (Chief Design Officer)",
+      "name": "MacBook Air Azul",
+      "machineRole": "Direccion creativa",
+      "location": "Madrid",
+      "platform": "macOS",
+      "status": "offline",
+      "lastSeen": "2026-04-08T12:37:04Z",
+      "currentFocus": "Offline — ultima conexion hace 1m ago",
+      "note": "Tailscale: macbookairazul (100.84.81.45)",
+      "ssh": {
+        "enabled": true,
+        "user": "csilvasantin",
+        "host": "macbookairazul.tail48b61c.ts.net",
+        "ip_tailscale": "100.84.81.45",
+        "connect_tailscale": "ssh csilvasantin@100.84.81.45"
       }
     }
   ]
