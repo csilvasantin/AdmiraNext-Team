@@ -57,7 +57,12 @@ authorize_one() {
             "grep -qF '$MACMINI_PUB' ~/.ssh/authorized_keys 2>/dev/null || echo '$MACMINI_PUB' >> ~/.ssh/authorized_keys" 2>/dev/null
     fi
 
-    # 7. Verificar conexión bidireccional
+    # 7. Desactivar Tailscale SSH (intercepta conexiones y abre browsers de login)
+    ssh $SSH_OPTS csilvasantin@"$ip" \
+        "/Applications/Tailscale.app/Contents/MacOS/Tailscale set --ssh=false 2>/dev/null" 2>/dev/null
+    echo "  $host ($ip): Tailscale SSH desactivado ✓"
+
+    # 8. Verificar conexión bidireccional
     VERIFY=$(ssh $SSH_OPTS csilvasantin@"$ip" \
         "ssh -o ConnectTimeout=3 -o StrictHostKeyChecking=no -o BatchMode=yes csilvasantin@100.74.101.14 'echo OK' 2>/dev/null" 2>/dev/null)
     if [ "$VERIFY" = "OK" ]; then
