@@ -618,38 +618,82 @@ matrix_transition() {
     IFS='|' read -r lang2_name lang2_creator lang2_year <<< "${LANG_INFO[$LANG2_IDX]}"
     IFS='|' read -r lang3_name lang3_creator lang3_year <<< "${LANG3_INFO[$LANG3_IDX]}"
 
-    # Triple language header banner
+    # 5-column header: machine code + 4 languages
     echo
-    echo -e "  ${W}╔════════════════════╦════════════════════╦════════════════════╗${N}"
-    printf  "  ${W}║${N} ${C}%-19s${N}${W}║${N} ${C}%-19s${N}${W}║${N} ${C}%-19s${N}${W}║${N}\n" "${lang1_name}" "${lang2_name}" "${lang3_name}"
-    printf  "  ${W}║${N} ${DG}%-19s${N}${W}║${N} ${DG}%-19s${N}${W}║${N} ${DG}%-19s${N}${W}║${N}\n" "${lang1_year}" "${lang2_year}" "${lang3_year}"
-    echo -e "  ${W}╚════════════════════╩════════════════════╩════════════════════╝${N}"
+    echo -e "${W}╔══════════════╦═══════════════╦═══════════════╦═══════════════╦═══════════════╗${N}"
+    printf  "${W}║${N}${DG} Machine Code ${N}${W}║${N} ${C}%-14s${N}${W}║${N} ${C}%-14s${N}${W}║${N} ${C}%-14s${N}${W}║${N} ${C}%-14s${N}${W}║${N}\n" "${lang1_name}" "${lang2_name}" "${lang3_name}" "Hex Dump"
+    printf  "${W}║${N}${DG} Binary/Opcodes${N}${W}║${N} ${DG}%-14s${N}${W}║${N} ${DG}%-14s${N}${W}║${N} ${DG}%-14s${N}${W}║${N} ${DG}%-14s${N}${W}║${N}\n" "${lang1_year}" "${lang2_year}" "${lang3_year}" "Raw Memory"
+    echo -e "${W}╚══════════════╩═══════════════╩═══════════════╩═══════════════╩═══════════════╝${N}"
     echo
     sleep 0.5
 
-    local THIRD=$(( (COLS / 3) - 1 ))
+    local CW=$(( (COLS / 5) ))
     local code2_idx=$((CODE_IDX + 17))
     local code3_idx=$((CODE_IDX + 7))
+
+    # Machine code opcodes for column 0
+    local -a OPCODES=(
+        "55 48 89 e5 48 83"
+        "ec 40 c7 45 fc 00"
+        "48 8d 75 c0 bf 01"
+        "e8 3a ff ff ff 89"
+        "83 f8 00 0f 84 2a"
+        "48 8b 45 f8 48 89"
+        "b8 01 00 00 00 cd"
+        "31 c0 31 db 31 c9"
+        "0f 05 48 89 c7 48"
+        "ff 15 2a 00 00 00"
+        "48 c7 c0 3b 00 00"
+        "48 89 e7 0f 05 90"
+        "53 51 52 56 57 55"
+        "5d 5f 5e 5a 59 5b"
+        "e9 4c 01 00 00 90"
+        "f3 0f 1e fa 55 48"
+        "c3 90 90 90 90 90"
+        "48 b8 2f 62 69 6e"
+        "2f 73 68 00 50 48"
+        "89 e7 31 f6 31 d2"
+        "41 ba ff ff ff 7f"
+        "49 89 ca 0f 05 48"
+        "83 ec 08 48 89 3c"
+        "24 e8 00 00 00 00"
+        "48 31 ff 48 f7 e6"
+        "eb fe 90 cc cc cc"
+        "48 8d 0d 00 00 00"
+        "ba 00 04 00 00 be"
+        "01 00 00 00 31 ff"
+        "44 89 e0 48 98 48"
+    )
+    local OP_COUNT=${#OPCODES[@]}
+    local op_idx=$((ART_SEED * 3))
 
     for ((l=0; l<ROWS; l++)); do
         local c1="${colors[$((RANDOM % ${#colors[@]}))]}"
         local c2="${colors[$((RANDOM % ${#colors[@]}))]}"
         local c3="${colors[$((RANDOM % ${#colors[@]}))]}"
-        local col1 col2 col3
+        local c4="${colors[$((RANDOM % ${#colors[@]}))]}"
 
-        # Column 1: primary language
-        col1="${ALL_CODE_LINES[$((CODE_IDX % CODE_COUNT))]}"
+        # Column 0: machine code opcodes
+        local col0="${OPCODES[$((op_idx % OP_COUNT))]}"
+        op_idx=$((op_idx + 1))
+
+        # Column 1: classic language 1
+        local col1="${ALL_CODE_LINES[$((CODE_IDX % CODE_COUNT))]}"
         CODE_IDX=$((CODE_IDX + 1))
 
-        # Column 2: secondary language
-        col2="${ALL_CODE_LINES2[$((code2_idx % CODE2_COUNT))]}"
+        # Column 2: classic language 2
+        local col2="${ALL_CODE_LINES2[$((code2_idx % CODE2_COUNT))]}"
         code2_idx=$((code2_idx + 1))
 
         # Column 3: modern language
-        col3="${ALL_CODE_LINES3[$((code3_idx % CODE3_COUNT))]}"
+        local col3="${ALL_CODE_LINES3[$((code3_idx % CODE3_COUNT))]}"
         code3_idx=$((code3_idx + 1))
 
-        printf "${c1}%-${THIRD}s${DG}│${c2}%-${THIRD}s${DG}│${c3}%-${THIRD}s${N}\n" "${col1:0:$THIRD}" "${col2:0:$THIRD}" "${col3:0:$THIRD}"
+        # Column 4: hex memory dump
+        local col4
+        printf -v col4 '%04x: %02x %02x %02x %02x' $((RANDOM % 65536)) $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256))
+
+        printf "${DG}%-${CW}s${N}${c1}%-${CW}s${N}${c2}%-${CW}s${N}${c3}%-${CW}s${N}${c4}%-${CW}s${N}\n" "${col0:0:$CW}" "${col1:0:$CW}" "${col2:0:$CW}" "${col3:0:$CW}" "${col4:0:$CW}"
         sleep 0.02
     done
 }
