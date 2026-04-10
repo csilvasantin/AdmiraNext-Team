@@ -737,6 +737,10 @@ LANG3_IDX=$((ART_SEED % 8))
 
 LANG1_IDX=$((ART_SEED % 6))
 LANG2_IDX=$(( (ART_SEED + 3) % 6 ))
+# Speed per machine: CEO (0) fastest, each seed adds delay
+RAIN_SPEEDS=("0.01" "0.02" "0.03" "0.04" "0.05" "0.06" "0.07" "0.08")
+RAIN_SPEED="${RAIN_SPEEDS[$ART_SEED]}"
+
 CODE_IDX=0
 TRANSITION_COUNT=0
 
@@ -763,18 +767,19 @@ matrix_transition() {
     local lingo_info="J.H. Thompson"
     IFS='|' read -r ai_name ai_creator ai_year <<< "${AI_LANG_INFO[$AI_LANG_IDX]}"
 
-    # 6 columns with "  │  " separators (5 separators × 5 chars = 25)
-    local CW=$(( (COLS - 25) / 6 ))
+    # 6 columns with "   │   " separators (5 separators × 7 chars = 35)
+    local CW=$(( (COLS - 35) / 6 ))
 
     # Build dynamic header
+    local PW=$((CW + 6))
     local hline=""
-    for ((i=0; i<$((CW+4)); i++)); do hline+="═"; done
+    for ((i=0; i<PW; i++)); do hline+="═"; done
 
     echo
     echo -e "${W}╔${hline}╦${hline}╦${hline}╦${hline}╦${hline}╦${hline}╗${N}"
-    printf  "${W}║${N}  ${G}%-$((CW+2))s${W}║${N}  ${C}%-$((CW+2))s${W}║${N}  ${Y}%-$((CW+2))s${W}║${N}  ${M}%-$((CW+2))s${W}║${N}  ${W}%-$((CW+2))s${W}║${N}  ${R}%-$((CW+2))s${W}║${N}\n" "${lang1_name}" "${lang2_name}" "${lingo_name}" "${lang3_name}" "${ai_name}" "Machine Code"
-    printf  "${W}║${N}  ${DG}%-$((CW+2))s${W}║${N}  ${DG}%-$((CW+2))s${W}║${N}  ${DG}%-$((CW+2))s${W}║${N}  ${DG}%-$((CW+2))s${W}║${N}  ${DG}%-$((CW+2))s${W}║${N}  ${DG}%-$((CW+2))s${W}║${N}\n" "${lang1_creator}" "${lang2_creator}" "${lingo_info}" "${lang3_creator}" "${ai_creator}" "x86-64"
-    printf  "${W}║${N}  ${DG}%-$((CW+2))s${W}║${N}  ${DG}%-$((CW+2))s${W}║${N}  ${DG}%-$((CW+2))s${W}║${N}  ${DG}%-$((CW+2))s${W}║${N}  ${DG}%-$((CW+2))s${W}║${N}  ${DG}%-$((CW+2))s${W}║${N}\n" "${lang1_year}" "${lang2_year}" "1988-2017" "${lang3_year}" "${ai_year}" "1978-now"
+    printf  "${W}║${N}   ${G}%-$((PW-3))s${W}║${N}   ${C}%-$((PW-3))s${W}║${N}   ${Y}%-$((PW-3))s${W}║${N}   ${M}%-$((PW-3))s${W}║${N}   ${W}%-$((PW-3))s${W}║${N}   ${R}%-$((PW-3))s${W}║${N}\n" "${lang1_name}" "${lang2_name}" "${lingo_name}" "${lang3_name}" "${ai_name}" "Machine Code"
+    printf  "${W}║${N}   ${DG}%-$((PW-3))s${W}║${N}   ${DG}%-$((PW-3))s${W}║${N}   ${DG}%-$((PW-3))s${W}║${N}   ${DG}%-$((PW-3))s${W}║${N}   ${DG}%-$((PW-3))s${W}║${N}   ${DG}%-$((PW-3))s${W}║${N}\n" "${lang1_creator}" "${lang2_creator}" "${lingo_info}" "${lang3_creator}" "${ai_creator}" "x86-64"
+    printf  "${W}║${N}   ${DG}%-$((PW-3))s${W}║${N}   ${DG}%-$((PW-3))s${W}║${N}   ${DG}%-$((PW-3))s${W}║${N}   ${DG}%-$((PW-3))s${W}║${N}   ${DG}%-$((PW-3))s${W}║${N}   ${DG}%-$((PW-3))s${W}║${N}\n" "${lang1_year}" "${lang2_year}" "1988-2017" "${lang3_year}" "${ai_year}" "1978-now"
     echo -e "${W}╚${hline}╩${hline}╩${hline}╩${hline}╩${hline}╩${hline}╝${N}"
     echo
     sleep 0.5
@@ -834,8 +839,8 @@ matrix_transition() {
         local col6="${OPCODES[$((op_idx % OP_COUNT))]}"
         op_idx=$((op_idx + 1))
 
-        printf "${G}%-${CW}s  ${DG}│  ${C}%-${CW}s  ${DG}│  ${Y}%-${CW}s  ${DG}│  ${M}%-${CW}s  ${DG}│  ${W}%-${CW}s  ${DG}│  ${R}%-${CW}s${N}\n" "${col1:0:$CW}" "${col2:0:$CW}" "${col3:0:$CW}" "${col4:0:$CW}" "${col5:0:$CW}" "${col6:0:$CW}"
-        sleep 0.02
+        printf "${G}%-${CW}s   ${DG}│   ${C}%-${CW}s   ${DG}│   ${Y}%-${CW}s   ${DG}│   ${M}%-${CW}s   ${DG}│   ${W}%-${CW}s   ${DG}│   ${R}%-${CW}s${N}\n" "${col1:0:$CW}" "${col2:0:$CW}" "${col3:0:$CW}" "${col4:0:$CW}" "${col5:0:$CW}" "${col6:0:$CW}"
+        sleep ${RAIN_SPEED}
     done
 }
 
