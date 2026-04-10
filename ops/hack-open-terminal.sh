@@ -1,17 +1,31 @@
 #!/bin/bash
-# hack-open-terminal.sh — Opens Terminal maximized/fullscreen with hack-sim.sh
+# hack-open-terminal.sh — Opens Terminal with a unique profile per council machine
 # Uploaded to remote Mac and executed there.
 # Usage: hack-open-terminal.sh <hostname> <ip>
 
 HOST="$1"
 IP="$2"
 
-# Step 1: Open Terminal, run hack script, maximize window (always works, no Accessibility needed)
+# Map each machine to a unique Terminal profile
+case "$HOST" in
+    MacBookAir16|macbookair16)           PROFILE="Homebrew" ;;       # CEO - Steve Jobs
+    MacBookProNegro14|macbookpronegro14) PROFILE="Red Sands" ;;      # CTO - Steve Wozniak
+    MacBookAirPlata|macbookairplata)     PROFILE="Ocean" ;;          # COO - Tim Cook
+    MacMini|macmini)                     PROFILE="Pro" ;;            # CFO - Warren Buffett
+    MacBookAirBlanco|macbookairblanco)   PROFILE="Novel" ;;          # CCO - Walt Disney
+    MacBookAirAzul|macbookairazul)       PROFILE="Silver Aerogel" ;; # CDO - Dieter Rams
+    AdmiraTwin|admira-pctwin)            PROFILE="Grass" ;;          # CXO - Howard Schultz
+    MacBookAirCrema|macbookaircrema)     PROFILE="Man Page" ;;       # CSO - George Lucas
+    *)                                   PROFILE="Basic" ;;
+esac
+
+# Step 1: Open Terminal with the assigned profile, run hack script, maximize window
 osascript -e "
 tell application \"Terminal\"
     activate
-    do script \"export TERM=xterm-256color; clear && bash /tmp/hack-sim.sh '$HOST' '$IP'\"
-    delay 0.5
+    set newTab to do script \"export TERM=xterm-256color; clear && bash /tmp/hack-sim.sh '$HOST' '$IP'\" in (do script \"\")
+    delay 0.3
+    set current settings of front window to settings set \"$PROFILE\"
     set bounds of front window to {0, 0, 3000, 2000}
 end tell"
 
