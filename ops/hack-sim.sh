@@ -637,36 +637,234 @@ echo
 sleep 3
 
 # ══════════════════════════════════════════════════════════════
-# MATRIX RAIN — unique charset per machine
+# INFINITE LOOP — Rotating movie quotes + ASCII art
+# Much more cinematic than raw matrix rain
 # ══════════════════════════════════════════════════════════════
 
-CHARSETS=(
-    "01アイウエオカキクケコ@#\$%&"
-    "01абвгдежзик@#\$%&"
-    "01你好世界黑客入侵@#\$%&"
-    "01αβγδεζηθικ@#\$%&"
-    "01♠♣♥♦★☆◆◇○●@#\$%&"
-    "01بتثجحخدذرز@#\$%&"
-    "01가나다라마바사아자차@#\$%&"
-    "01∑∏∫∂√∞≈≠±@#\$%&"
+# Extended quotes catalog — one-liners displayed in boxes
+QUOTES=(
+    "I'll be back.|Terminator (1984)|${R}"
+    "Game over, man! Game over!|Aliens (1986)|${G}"
+    "Shall we play a game?|WarGames (1983)|${C}"
+    "I know kung fu.|The Matrix (1999)|${G}"
+    "Open the pod bay doors, HAL.|2001: A Space Odyssey (1968)|${R}"
+    "May the Force be with you.|Star Wars (1977)|${Y}"
+    "Time to die.|Blade Runner (1982)|${C}"
+    "Greetings, Professor Falken.|WarGames (1983)|${G}"
+    "Welcome to the real world.|The Matrix (1999)|${G}"
+    "The only winning move is not to play.|WarGames (1983)|${C}"
+    "Hasta la vista, baby.|Terminator 2 (1991)|${R}"
+    "I see you.|Avatar (2009)|${C}"
+    "End of line.|Tron (1982)|${C}"
+    "It's a UNIX system! I know this!|Jurassic Park (1993)|${G}"
+    "Resistance is futile.|Star Trek (1996)|${M}"
+    "Do. Or do not. There is no try.|Star Wars (1980)|${Y}"
+    "Danger, Will Robinson!|Lost in Space (1965)|${R}"
+    "I'm sorry, Dave. I'm afraid I can't do that.|2001 (1968)|${R}"
+    "Access denied... just kidding.|Hackers (1995)|${G}"
+    "We are the Borg.|Star Trek (1996)|${M}"
+    "The Matrix has you.|The Matrix (1999)|${G}"
+    "Roads? Where we're going we don't need roads.|Back to the Future (1985)|${Y}"
+    "They're alive! They're alive!|Frankenstein (1931)|${R}"
+    "By Grabthar's hammer... what a savings.|Galaxy Quest (1999)|${C}"
+    "Your scientists were so preoccupied with whether they could...|Jurassic Park (1993)|${Y}"
+    "I've seen things you people wouldn't believe.|Blade Runner (1982)|${C}"
+    "Luke, I am your father.|Star Wars (1980)|${R}"
+    "To infinity... and beyond!|Toy Story (1995)|${M}"
+    "E.T. phone home.|E.T. (1982)|${Y}"
+    "There is no spoon.|The Matrix (1999)|${G}"
+    "The system is down.|Sneakers (1992)|${R}"
+    "Hack the planet!|Hackers (1995)|${G}"
 )
-RAIN_CHARS="${CHARSETS[$ART_SEED]}"
 
-echo -e "${G}"
+# Extended art gallery — small pieces that rotate
+show_extra_art() {
+    case $(( $1 % 12 )) in
+    0) echo -e "${R}"
+cat << 'ART'
+        ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+       █ ▄▄▄▄▄ █ ▄█▀█ █ ▄▄▄▄▄ █
+       █ █   █ █ ▄▄▄ ██ █   █ █
+       █ █▄▄▄█ █ ▀▀▄██ █▄▄▄█ █
+       █▄▄▄▄▄▄▄█ █ ▀ █▄▄▄▄▄▄▄█
+       █ ▄▄▄▀█▄██▀▄▄▀   ▀▀▀▄ █
+       █ ▀▀▀ ▄▄▀▄▀ ▀▄▀▀▀▄▀█▀ █
+       █▄▄▄▄▄▄▄█▄▀▀▀▀▄█▄█▄██▄█
+         >>>  QR IMPLANT  <<<
+ART
+echo -e "${N}" ;;
+    1) echo -e "${C}"
+cat << 'ART'
+          .----.   @   @
+         / .-"-.`.  \v/
+         | | '\ \ \_/ )
+       ,-\ `-.' /.'  /
+      '---`----'----'
+    >>> NEURAL INTERFACE <<<
+ART
+echo -e "${N}" ;;
+    2) echo -e "${Y}"
+cat << 'ART'
+       ____  ____  ____  ____
+      ||D ||||A ||||T ||||A ||
+      ||__||||__||||__||||__||
+      |/__\||/__\||/__\||/__\|
+       ____  ____  ____  ____
+      ||L ||||E ||||A ||||K ||
+      ||__||||__||||__||||__||
+      |/__\||/__\||/__\||/__\|
+ART
+echo -e "${N}" ;;
+    3) echo -e "${G}"
+cat << 'ART'
+      ╔══════════════════════╗
+      ║ > ACCESS LEVEL: ROOT ║
+      ║ > CLEARANCE: OMEGA   ║
+      ║ > THREAT: CRITICAL   ║
+      ║ > STATUS: ACTIVE     ║
+      ╚══════════════════════╝
+ART
+echo -e "${N}" ;;
+    4) echo -e "${M}"
+cat << 'ART'
+       .-========-.
+       | DARKWEB  |
+       | AUCTION  |
+       |----------|
+       | LOT #42  |
+       | 891MB DB |
+       | BID: 5₿  |
+       '-========-'
+ART
+echo -e "${N}" ;;
+    5) echo -e "${R}"
+cat << 'ART'
+      ⠀⠀⠀⠀⠀⠀⢀⣤⣤⡀⠀⠀⠀⠀⠀⠀
+      ⠀⠀⠀⠀⠀⢀⣿⣿⣿⡀⠀⠀⠀⠀⠀
+      ⠀⠀⠀⠀⠀⢸⣿⣿⣿⡇⠀⠀⠀⠀⠀
+      ⠀⠀⠀⠀⠀⠘⣿⣿⣿⠃⠀⠀⠀⠀⠀
+      ⠀⠀⠀⠀⠀⠀⠈⠿⠁⠀⠀⠀⠀⠀⠀
+      ⠀⢀⣀⣤⣤⣤⣤⣤⣤⣤⣤⣀⡀⠀
+      ⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+       >>> ENCRYPTION KEY <<<
+ART
+echo -e "${N}" ;;
+    6) echo -e "${C}"
+cat << 'ART'
+      ┌─────────────────────┐
+      │  ┌───┐   ┌───┐     │
+      │  │ 0 │ → │ 1 │     │
+      │  └─┬─┘   └─┬─┘     │
+      │    │   ╲╱   │       │
+      │    │   ╱╲   │       │
+      │  ┌─┴─┐   ┌─┴─┐     │
+      │  │ 1 │ ← │ 0 │     │
+      │  └───┘   └───┘     │
+      │  >>> QUANTUM BIT <<< │
+      └─────────────────────┘
+ART
+echo -e "${N}" ;;
+    7) echo -e "${Y}"
+cat << 'ART'
+           ___
+          |   |
+          |   |
+          |   |
+     _____|   |_____
+    |               |
+    |   FIREWALL    |
+    |   BYPASSED    |
+    |_______________|
+    |               |
+    |_______________|
+ART
+echo -e "${N}" ;;
+    8) echo -e "${G}"
+cat << 'ART'
+     ╭──────────────────╮
+     │  ⚡ POWER GRID   │
+     │  ▓▓▓▓▓▓▓▓░░ 80%  │
+     │  OVERRIDING...    │
+     │  ▓▓▓▓▓▓▓▓▓▓ 100% │
+     │  ⚠ GRID CAPTURED │
+     ╰──────────────────╯
+ART
+echo -e "${N}" ;;
+    9) echo -e "${R}"
+cat << 'ART'
+      ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄
+      █  SYSTEM ALERT   █
+      █  ╔═══════════╗  █
+      █  ║ BACKDOOR  ║  █
+      █  ║ INSTALLED ║  █
+      █  ╚═══════════╝  █
+      ▀▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▀
+ART
+echo -e "${N}" ;;
+    10) echo -e "${M}"
+cat << 'ART'
+       .  *  .   .  *
+    *  .  SATELLITE  .  *
+     .   INTERCEPT  .
+    *  .  ACTIVE  .  *
+       .  *  .   .  *
+       ╱╲    ╱╲    ╱╲
+      ╱  ╲  ╱  ╲  ╱  ╲
+     ╱    ╲╱    ╲╱    ╲
+ART
+echo -e "${N}" ;;
+    11) echo -e "${C}"
+cat << 'ART'
+      ┌──────────────────┐
+      │ KEYLOGGER ACTIVE │
+      ├──────────────────┤
+      │ ████░░░░░░ 40%   │
+      │ Capturing...     │
+      │ > p@ssw0rd123    │
+      │ > admin:root     │
+      │ > sk-ant-api03-  │
+      └──────────────────┘
+ART
+echo -e "${N}" ;;
+    esac
+}
+
+# Infinite rotation: quote → art → quote → art...
+QUOTE_IDX=$ART_SEED
+ART_IDX=$((ART_SEED + 4))
+
 while true; do
-    line=""
-    for ((i=0; i<COLS; i++)); do
-        r=$((RANDOM % 4))
-        if [ $r -eq 0 ]; then
-            line+="$(printf '%x' $((RANDOM % 16)))"
-        elif [ $r -eq 1 ]; then
-            line+=" "
-        elif [ $r -eq 2 ]; then
-            line+="${RAIN_CHARS:$((RANDOM % ${#RAIN_CHARS})):1}"
-        else
-            line+="$(printf '%x' $((RANDOM % 256)))"
-        fi
-    done
-    echo "$line"
-    sleep 0.05
+    clear
+
+    # Show a quote in a box
+    IFS='|' read -r quote_text quote_movie quote_color <<< "${QUOTES[$((QUOTE_IDX % ${#QUOTES[@]}))]}"
+    echo
+    echo
+    echo -e "  ${quote_color}╔══════════════════════════════════════════════════════════════╗${N}"
+    echo -e "  ${quote_color}║${N}                                                              ${quote_color}║${N}"
+    printf  "  ${quote_color}║${N}   ${W}\"${quote_text}\"${N}%*s${quote_color}║${N}\n" $((58 - ${#quote_text})) ""
+    echo -e "  ${quote_color}║${N}                                                              ${quote_color}║${N}"
+    printf  "  ${quote_color}║${N}   ${DG}— ${quote_movie}${N}%*s${quote_color}║${N}\n" $((55 - ${#quote_movie})) ""
+    echo -e "  ${quote_color}║${N}                                                              ${quote_color}║${N}"
+    echo -e "  ${quote_color}╚══════════════════════════════════════════════════════════════╝${N}"
+    echo
+    sleep 4
+
+    clear
+
+    # Show an art piece
+    echo
+    echo
+    show_extra_art $ART_IDX
+    echo
+
+    # Show status footer
+    echo -e "  ${DG}────────────────────────────────────────────────────${N}"
+    printf  "  ${R}◉${N} ${W}%-20s${N} ${DG}│${N} ${Y}%-15s${N} ${DG}│${N} ${G}%s${N}\n" "${HOST}" "${HACKER}" "${EXFIL_SIZE} stolen"
+    echo -e "  ${DG}────────────────────────────────────────────────────${N}"
+    echo
+    sleep 4
+
+    QUOTE_IDX=$((QUOTE_IDX + 1))
+    ART_IDX=$((ART_IDX + 1))
 done
