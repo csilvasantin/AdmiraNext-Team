@@ -310,9 +310,11 @@ CODE2_COUNT=${#ALL_CODE_LINES2[@]}
 CODE_IDX=0
 
 matrix_transition() {
-    # Full-screen code rain filling the terminal
-    local ROWS=$(tput lines 2>/dev/null || echo 24)
+    # Full-screen code rain — always fills entire terminal top to bottom
+    # Use 60 lines as safe max (covers any fullscreen Mac terminal)
+    local ROWS=60
     local colors=("${G}" "${D}" "${DG}" "${C}" "${G}" "${D}")
+    echo
     for ((l=0; l<ROWS; l++)); do
         local color="${colors[$((RANDOM % ${#colors[@]}))]}"
         # Alternate between code lines and hex noise
@@ -332,7 +334,7 @@ matrix_transition() {
             done
             printf "${N}\n"
         fi
-        sleep 0.03
+        sleep 0.02
     done
 }
 
