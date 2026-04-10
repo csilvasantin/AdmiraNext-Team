@@ -622,17 +622,24 @@ matrix_transition() {
     local lingo_name="Lingo"
     local lingo_info="John H. Thompson, 1988-2017"
 
-    # 5-column header: lang1 | lang2 | Lingo | lang3(modern) | machine code
+    # Use full terminal width: 5 columns + 4 separators
+    local CW=$(( (COLS - 4) / 5 ))
+    local HW=$((CW - 1))
+    local FULL_W=$(( CW * 5 + 4 ))
+
+    # Build dynamic header
+    local hline=""
+    for ((i=0; i<CW; i++)); do hline+="═"; done
+
     echo
-    echo -e "${W}╔═══════════════╦═══════════════╦═══════════════╦═══════════════╦═══════════════╗${N}"
-    printf  "${W}║${N} ${C}%-14s${N}${W}║${N} ${C}%-14s${N}${W}║${N} ${Y}%-14s${N}${W}║${N} ${C}%-14s${N}${W}║${N} ${DG}%-14s${N}${W}║${N}\n" "${lang1_name}" "${lang2_name}" "${lingo_name}" "${lang3_name}" "Machine Code"
-    printf  "${W}║${N} ${DG}%-14s${N}${W}║${N} ${DG}%-14s${N}${W}║${N} ${DG}%-14s${N}${W}║${N} ${DG}%-14s${N}${W}║${N} ${DG}%-14s${N}${W}║${N}\n" "${lang1_creator}" "${lang2_creator}" "${lingo_info}" "${lang3_creator}" "x86-64 opcodes"
-    printf  "${W}║${N} ${DG}%-14s${N}${W}║${N} ${DG}%-14s${N}${W}║${N} ${DG}%-14s${N}${W}║${N} ${DG}%-14s${N}${W}║${N} ${DG}%-14s${N}${W}║${N}\n" "${lang1_year}" "${lang2_year}" "Macromedia" "${lang3_year}" "1978-present"
-    echo -e "${W}╚═══════════════╩═══════════════╩═══════════════╩═══════════════╩═══════════════╝${N}"
+    echo -e "${W}╔${hline}╦${hline}╦${hline}╦${hline}╦${hline}╗${N}"
+    printf  "${W}║${N} ${C}%-${HW}s${W}║${N} ${C}%-${HW}s${W}║${N} ${Y}%-${HW}s${W}║${N} ${C}%-${HW}s${W}║${N} ${DG}%-${HW}s${W}║${N}\n" "${lang1_name}" "${lang2_name}" "${lingo_name}" "${lang3_name}" "Machine Code"
+    printf  "${W}║${N} ${DG}%-${HW}s${W}║${N} ${DG}%-${HW}s${W}║${N} ${DG}%-${HW}s${W}║${N} ${DG}%-${HW}s${W}║${N} ${DG}%-${HW}s${W}║${N}\n" "${lang1_creator}" "${lang2_creator}" "${lingo_info}" "${lang3_creator}" "x86-64 opcodes"
+    printf  "${W}║${N} ${DG}%-${HW}s${W}║${N} ${DG}%-${HW}s${W}║${N} ${DG}%-${HW}s${W}║${N} ${DG}%-${HW}s${W}║${N} ${DG}%-${HW}s${W}║${N}\n" "${lang1_year}" "${lang2_year}" "Macromedia" "${lang3_year}" "1978-present"
+    echo -e "${W}╚${hline}╩${hline}╩${hline}╩${hline}╩${hline}╝${N}"
     echo
     sleep 0.5
 
-    local CW=$(( (COLS / 5) ))
     local code2_idx=$((CODE_IDX + 17))
     local code3_idx=$((CODE_IDX + 7))
     local lingo_idx=$((CODE_IDX + 11))
@@ -700,7 +707,7 @@ matrix_transition() {
         local col5="${OPCODES[$((op_idx % OP_COUNT))]}"
         op_idx=$((op_idx + 1))
 
-        printf "${c1}%-${CW}s${c2}%-${CW}s${Y}%-${CW}s${c3}%-${CW}s${DG}%-${CW}s${N}\n" "${col1:0:$CW}" "${col2:0:$CW}" "${col3:0:$CW}" "${col4:0:$CW}" "${col5:0:$CW}"
+        printf "${c1}%-${CW}s${DG}│${c2}%-${CW}s${DG}│${Y}%-${CW}s${DG}│${c3}%-${CW}s${DG}│${DG}%-${CW}s${N}\n" "${col1:0:$CW}" "${col2:0:$CW}" "${col3:0:$CW}" "${col4:0:$CW}" "${col5:0:$CW}"
         sleep 0.02
     done
 }
