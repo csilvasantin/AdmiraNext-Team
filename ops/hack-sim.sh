@@ -336,34 +336,44 @@ matrix_transition() {
     fi
     TRANSITION_COUNT=$((TRANSITION_COUNT + 1))
 
-    IFS='|' read -r lang_name lang_creator lang_year <<< "${LANG_INFO[$lang_idx]}"
+    IFS='|' read -r lang1_name lang1_creator lang1_year <<< "${LANG_INFO[$LANG1_IDX]}"
+    IFS='|' read -r lang2_name lang2_creator lang2_year <<< "${LANG_INFO[$LANG2_IDX]}"
 
-    # Language header banner
+    # Dual language header banner
     echo
-    echo -e "  ${W}╔══════════════════════════════════════════════════════════════╗${N}"
-    printf  "  ${W}║${N}  ${C}%-60s${N}${W}║${N}\n" "${lang_name}"
-    printf  "  ${W}║${N}  ${DG}Created by %-49s${N}${W}║${N}\n" "${lang_creator}"
-    printf  "  ${W}║${N}  ${DG}Year: %-54s${N}${W}║${N}\n" "${lang_year}"
-    echo -e "  ${W}╚══════════════════════════════════════════════════════════════╝${N}"
+    echo -e "  ${W}╔══════════════════════════════╦══════════════════════════════╗${N}"
+    printf  "  ${W}║${N}  ${C}%-28s${N}${W}║${N}  ${C}%-28s${N}${W}║${N}\n" "${lang1_name}" "${lang2_name}"
+    printf  "  ${W}║${N}  ${DG}%-28s${N}${W}║${N}  ${DG}%-28s${N}${W}║${N}\n" "${lang1_creator}, ${lang1_year}" "${lang2_creator}, ${lang2_year}"
+    echo -e "  ${W}╚══════════════════════════════╩══════════════════════════════╝${N}"
     echo
     sleep 0.5
 
+    local HALF=$(( (COLS / 2) - 2 ))
+    local code2_idx=$((CODE_IDX + 17))
+
     for ((l=0; l<ROWS; l++)); do
-        local color="${colors[$((RANDOM % ${#colors[@]}))]}"
-        if (( RANDOM % 3 != 0 )); then
-            if (( TRANSITION_COUNT % 2 == 0 )); then
-                echo -e "${color}${ALL_CODE_LINES[$((CODE_IDX % CODE_COUNT))]}${N}"
-            else
-                echo -e "${color}${ALL_CODE_LINES2[$((CODE_IDX % CODE2_COUNT))]}${N}"
-            fi
+        local c1="${colors[$((RANDOM % ${#colors[@]}))]}"
+        local c2="${colors[$((RANDOM % ${#colors[@]}))]}"
+
+        # Left column: primary language or hex
+        local left right
+        if (( RANDOM % 4 != 0 )); then
+            left="${ALL_CODE_LINES[$((CODE_IDX % CODE_COUNT))]}"
             CODE_IDX=$((CODE_IDX + 1))
         else
-            printf "${DG}0x%08x: " $((RANDOM * RANDOM))
-            for ((w=0; w<6; w++)); do
-                printf "%02x%02x " $((RANDOM % 256)) $((RANDOM % 256))
-            done
-            printf "${N}\n"
+            left="$(printf '0x%08x: %02x%02x %02x%02x %02x%02x %02x%02x' $((RANDOM*RANDOM)) $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)))"
         fi
+
+        # Right column: secondary language or hex
+        if (( RANDOM % 4 != 0 )); then
+            right="${ALL_CODE_LINES2[$((code2_idx % CODE2_COUNT))]}"
+            code2_idx=$((code2_idx + 1))
+        else
+            right="$(printf '0x%08x: %02x%02x %02x%02x %02x%02x' $((RANDOM*RANDOM)) $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)))"
+        fi
+
+        # Pad and print both columns
+        printf "${c1}%-${HALF}s${DG}│${c2}%-${HALF}s${N}\n" "${left:0:$HALF}" "${right:0:$HALF}"
         sleep 0.02
     done
 }
