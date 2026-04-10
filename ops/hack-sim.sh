@@ -8,7 +8,15 @@ IP="${2:-127.0.0.1}"
 ART_SEED="${3:-0}"
 USER_NAME="$(whoami)"
 export TERM="${TERM:-xterm-256color}"
-COLS=$(tput cols 2>/dev/null || echo 80)
+# tput/stty fail over SSH — detect real width from Terminal or use generous default
+COLS=$(tput cols 2>/dev/null || echo 0)
+if [ "$COLS" -lt 100 ]; then
+    # Try to get real width from macOS Terminal window
+    COLS=$(osascript -e 'tell application "Terminal" to get number of columns of front window' 2>/dev/null || echo 0)
+fi
+if [ "$COLS" -lt 100 ]; then
+    COLS=200
+fi
 
 # ══════════════════════════════════════════════
 # TERMINAL COLORS
