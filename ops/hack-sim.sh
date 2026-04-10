@@ -588,6 +588,138 @@ RUBY_LINES=(
     "  end"
 )
 
+# AI/ML code snippets — one per machine
+PYTORCH_LINES=(
+    "  import torch"
+    "  import torch.nn as nn"
+    "  model = nn.Sequential("
+    "    nn.Linear(784, 256),"
+    "    nn.ReLU(),"
+    "    nn.Dropout(0.3),"
+    "    nn.Linear(256, 128),"
+    "    nn.ReLU(),"
+    "    nn.Linear(128, 10)"
+    "  )"
+    "  optimizer = torch.optim.Adam(model.parameters())"
+    "  loss_fn = nn.CrossEntropyLoss()"
+    "  for epoch in range(100):"
+    "    pred = model(X_train)"
+    "    loss = loss_fn(pred, y_train)"
+    "    loss.backward()"
+    "    optimizer.step()"
+    "    optimizer.zero_grad()"
+    "  with torch.no_grad():"
+    "    output = model(X_test)"
+    "  torch.save(model.state_dict(), 'exploit.pth')"
+    "  device = torch.device('cuda')"
+    "  model.to(device)"
+    "  tensor = torch.randn(32, 784).to(device)"
+    "  class Adversarial(nn.Module):"
+    "    def forward(self, x):"
+    "      return self.attack(x)"
+)
+
+TENSORFLOW_LINES=(
+    "  import tensorflow as tf"
+    "  model = tf.keras.Sequential(["
+    "    tf.keras.layers.Dense(256, activation='relu'),"
+    "    tf.keras.layers.Dropout(0.3),"
+    "    tf.keras.layers.Dense(128, activation='relu'),"
+    "    tf.keras.layers.Dense(10, activation='softmax')"
+    "  ])"
+    "  model.compile(optimizer='adam',"
+    "    loss='sparse_categorical_crossentropy')"
+    "  model.fit(X_train, y_train, epochs=50)"
+    "  predictions = model.predict(X_test)"
+    "  model.save('neural_backdoor.h5')"
+    "  tf.config.list_physical_devices('GPU')"
+    "  dataset = tf.data.Dataset.from_tensor_slices("
+    "    (features, labels)).batch(32)"
+    "  @tf.function"
+    "  def train_step(x, y):"
+    "    with tf.GradientTape() as tape:"
+    "      pred = model(x, training=True)"
+    "      loss = loss_fn(y, pred)"
+    "    grads = tape.gradient(loss, model.trainable_variables)"
+    "    optimizer.apply_gradients(zip(grads, model.trainable_variables))"
+    "  converter = tf.lite.TFLiteConverter.from_saved_model('model')"
+    "  tflite_model = converter.convert()"
+    "  interpreter = tf.lite.Interpreter(model_content=tflite_model)"
+)
+
+LANGCHAIN_LINES=(
+    "  from langchain.llms import Anthropic"
+    "  from langchain.chains import LLMChain"
+    "  from langchain.prompts import PromptTemplate"
+    "  llm = Anthropic(model='claude-opus-4-6')"
+    "  prompt = PromptTemplate("
+    "    input_variables=['target'],"
+    "    template='Analyze vulnerability: {target}'"
+    "  )"
+    "  chain = LLMChain(llm=llm, prompt=prompt)"
+    "  result = chain.run(target=host_info)"
+    "  from langchain.embeddings import OpenAIEmbeddings"
+    "  embeddings = OpenAIEmbeddings()"
+    "  from langchain.vectorstores import Chroma"
+    "  db = Chroma.from_documents(docs, embeddings)"
+    "  retriever = db.as_retriever()"
+    "  from langchain.agents import initialize_agent"
+    "  tools = [SearchTool(), ExploitTool()]"
+    "  agent = initialize_agent(tools, llm)"
+    "  agent.run('find and exploit vulnerabilities')"
+    "  from langchain.memory import ConversationBufferMemory"
+    "  memory = ConversationBufferMemory()"
+    "  from langchain.callbacks import StreamingStdOutCallbackHandler"
+    "  response = llm.predict('decode captured traffic')"
+    "  chain = load_chain('exploit_chain.json')"
+)
+
+SKLEARN_LINES=(
+    "  from sklearn.ensemble import RandomForestClassifier"
+    "  from sklearn.model_selection import train_test_split"
+    "  X_train, X_test, y_train, y_test = train_test_split("
+    "    features, labels, test_size=0.2)"
+    "  clf = RandomForestClassifier(n_estimators=100)"
+    "  clf.fit(X_train, y_train)"
+    "  score = clf.score(X_test, y_test)"
+    "  print(f'Accuracy: {score:.4f}')"
+    "  from sklearn.cluster import KMeans"
+    "  kmeans = KMeans(n_clusters=8)"
+    "  clusters = kmeans.fit_predict(network_data)"
+    "  from sklearn.neural_network import MLPClassifier"
+    "  mlp = MLPClassifier(hidden_layer_sizes=(256, 128))"
+    "  mlp.fit(X_train, y_train)"
+    "  from sklearn.preprocessing import StandardScaler"
+    "  scaler = StandardScaler()"
+    "  X_scaled = scaler.fit_transform(X)"
+    "  from sklearn.decomposition import PCA"
+    "  pca = PCA(n_components=50)"
+    "  X_reduced = pca.fit_transform(X_scaled)"
+    "  import joblib"
+    "  joblib.dump(clf, 'anomaly_detector.pkl')"
+    "  from sklearn.svm import SVC"
+    "  svm = SVC(kernel='rbf', C=10)"
+    "  svm.fit(X_train, y_train)"
+)
+
+# AI language per machine
+ALL_AI_LINES=()
+case $((ART_SEED % 4)) in
+    0) ALL_AI_LINES=("${PYTORCH_LINES[@]}") ;;
+    1) ALL_AI_LINES=("${TENSORFLOW_LINES[@]}") ;;
+    2) ALL_AI_LINES=("${LANGCHAIN_LINES[@]}") ;;
+    3) ALL_AI_LINES=("${SKLEARN_LINES[@]}") ;;
+esac
+AI_COUNT=${#ALL_AI_LINES[@]}
+
+AI_LANG_INFO=(
+    "PyTorch|Meta AI (Soumith Chintala)|2016"
+    "TensorFlow|Google Brain|2015"
+    "LangChain|Harrison Chase|2022"
+    "Scikit-learn|David Cournapeau (INRIA)|2007"
+)
+AI_LANG_IDX=$((ART_SEED % 4))
+
 # Third column: modern language per machine
 ALL_CODE_LINES3=()
 case $((ART_SEED % 8)) in
@@ -626,34 +758,33 @@ matrix_transition() {
     IFS='|' read -r lang2_name lang2_creator lang2_year <<< "${LANG_INFO[$LANG2_IDX]}"
     IFS='|' read -r lang3_name lang3_creator lang3_year <<< "${LANG3_INFO[$LANG3_IDX]}"
 
-    # Lingo is always the middle column (column 3)
+    # Column info
     local lingo_name="Lingo"
-    local lingo_info="John H. Thompson, 1988-2017"
+    local lingo_info="J.H. Thompson"
+    IFS='|' read -r ai_name ai_creator ai_year <<< "${AI_LANG_INFO[$AI_LANG_IDX]}"
 
-    # Use full terminal width: 5 columns + 4 separators of " │ " (3 chars each = 12)
-    local CW=$(( (COLS - 12) / 5 ))
-    local HW=$((CW))
+    # 6 columns with " │ " separators (5 separators × 3 chars = 15)
+    local CW=$(( (COLS - 15) / 6 ))
 
-    # Build dynamic header with spacing matching columns
+    # Build dynamic header
     local hline=""
-    local hcw=$((CW + 2))
-    for ((i=0; i<hcw; i++)); do hline+="═"; done
+    for ((i=0; i<$((CW+2)); i++)); do hline+="═"; done
 
     echo
-    echo -e "${W}╔${hline}╦${hline}╦${hline}╦${hline}╦${hline}╗${N}"
-    printf  "${W}║${N} ${C}%-$((HW+1))s${W}║${N} ${C}%-$((HW+1))s${W}║${N} ${Y}%-$((HW+1))s${W}║${N} ${C}%-$((HW+1))s${W}║${N} ${DG}%-$((HW+1))s${W}║${N}\n" "${lang1_name}" "${lang2_name}" "${lingo_name}" "${lang3_name}" "Machine Code"
-    printf  "${W}║${N} ${DG}%-$((HW+1))s${W}║${N} ${DG}%-$((HW+1))s${W}║${N} ${DG}%-$((HW+1))s${W}║${N} ${DG}%-$((HW+1))s${W}║${N} ${DG}%-$((HW+1))s${W}║${N}\n" "${lang1_creator}" "${lang2_creator}" "${lingo_info}" "${lang3_creator}" "x86-64 opcodes"
-    printf  "${W}║${N} ${DG}%-$((HW+1))s${W}║${N} ${DG}%-$((HW+1))s${W}║${N} ${DG}%-$((HW+1))s${W}║${N} ${DG}%-$((HW+1))s${W}║${N} ${DG}%-$((HW+1))s${W}║${N}\n" "${lang1_year}" "${lang2_year}" "Macromedia" "${lang3_year}" "1978-present"
-    echo -e "${W}╚${hline}╩${hline}╩${hline}╩${hline}╩${hline}╝${N}"
+    echo -e "${W}╔${hline}╦${hline}╦${hline}╦${hline}╦${hline}╦${hline}╗${N}"
+    printf  "${W}║${N} ${G}%-$((CW+1))s${W}║${N} ${C}%-$((CW+1))s${W}║${N} ${Y}%-$((CW+1))s${W}║${N} ${M}%-$((CW+1))s${W}║${N} ${W}%-$((CW+1))s${W}║${N} ${R}%-$((CW+1))s${W}║${N}\n" "${lang1_name}" "${lang2_name}" "${lingo_name}" "${lang3_name}" "${ai_name}" "Machine Code"
+    printf  "${W}║${N} ${DG}%-$((CW+1))s${W}║${N} ${DG}%-$((CW+1))s${W}║${N} ${DG}%-$((CW+1))s${W}║${N} ${DG}%-$((CW+1))s${W}║${N} ${DG}%-$((CW+1))s${W}║${N} ${DG}%-$((CW+1))s${W}║${N}\n" "${lang1_creator}" "${lang2_creator}" "${lingo_info}" "${lang3_creator}" "${ai_creator}" "x86-64"
+    printf  "${W}║${N} ${DG}%-$((CW+1))s${W}║${N} ${DG}%-$((CW+1))s${W}║${N} ${DG}%-$((CW+1))s${W}║${N} ${DG}%-$((CW+1))s${W}║${N} ${DG}%-$((CW+1))s${W}║${N} ${DG}%-$((CW+1))s${W}║${N}\n" "${lang1_year}" "${lang2_year}" "1988-2017" "${lang3_year}" "${ai_year}" "1978-now"
+    echo -e "${W}╚${hline}╩${hline}╩${hline}╩${hline}╩${hline}╩${hline}╝${N}"
     echo
     sleep 0.5
 
     local code2_idx=$((CODE_IDX + 17))
     local code3_idx=$((CODE_IDX + 7))
     local lingo_idx=$((CODE_IDX + 11))
+    local ai_idx=$((CODE_IDX + 5))
     local LINGO_COUNT=${#LINGO_LINES[@]}
 
-    # x86-64 opcodes
     local -a OPCODES=(
         "55 48 89 e5 48 83"
         "ec 40 c7 45 fc 00"
@@ -689,36 +820,21 @@ matrix_transition() {
     local OP_COUNT=${#OPCODES[@]}
     local op_idx=$((ART_SEED * 3))
 
-    # Fixed distinct color per column — always visible on any background
-    local COL1_C="${G}"    # Green: classic lang 1
-    local COL2_C="${C}"    # Cyan: classic lang 2
-    local COL3_C="${Y}"    # Yellow: Lingo (always)
-    local COL4_C="${M}"    # Magenta: modern lang
-    local COL5_C="${R}"    # Red: machine code
-
     for ((l=0; l<ROWS; l++)); do
-
-        # Col 1: classic language 1
         local col1="${ALL_CODE_LINES[$((CODE_IDX % CODE_COUNT))]}"
         CODE_IDX=$((CODE_IDX + 1))
-
-        # Col 2: classic language 2
         local col2="${ALL_CODE_LINES2[$((code2_idx % CODE2_COUNT))]}"
         code2_idx=$((code2_idx + 1))
-
-        # Col 3: Lingo (always)
         local col3="${LINGO_LINES[$((lingo_idx % LINGO_COUNT))]}"
         lingo_idx=$((lingo_idx + 1))
-
-        # Col 4: modern language
         local col4="${ALL_CODE_LINES3[$((code3_idx % CODE3_COUNT))]}"
         code3_idx=$((code3_idx + 1))
-
-        # Col 5: machine code opcodes
-        local col5="${OPCODES[$((op_idx % OP_COUNT))]}"
+        local col5="${ALL_AI_LINES[$((ai_idx % AI_COUNT))]}"
+        ai_idx=$((ai_idx + 1))
+        local col6="${OPCODES[$((op_idx % OP_COUNT))]}"
         op_idx=$((op_idx + 1))
 
-        printf "${COL1_C}%-${CW}s ${DG}│ ${COL2_C}%-${CW}s ${DG}│ ${COL3_C}%-${CW}s ${DG}│ ${COL4_C}%-${CW}s ${DG}│ ${COL5_C}%-${CW}s${N}\n" "${col1:0:$CW}" "${col2:0:$CW}" "${col3:0:$CW}" "${col4:0:$CW}" "${col5:0:$CW}"
+        printf "${G}%-${CW}s ${DG}│ ${C}%-${CW}s ${DG}│ ${Y}%-${CW}s ${DG}│ ${M}%-${CW}s ${DG}│ ${W}%-${CW}s ${DG}│ ${R}%-${CW}s${N}\n" "${col1:0:$CW}" "${col2:0:$CW}" "${col3:0:$CW}" "${col4:0:$CW}" "${col5:0:$CW}" "${col6:0:$CW}"
         sleep 0.02
     done
 }
