@@ -310,9 +310,8 @@ CODE2_COUNT=${#ALL_CODE_LINES2[@]}
 CODE_IDX=0
 
 matrix_transition() {
-    # Full-screen code rain — always fills entire terminal top to bottom
-    # Use 60 lines as safe max (covers any fullscreen Mac terminal)
-    local ROWS=60
+    # Full-screen code rain — overflow generously so it always fills
+    local ROWS=150
     local colors=("${G}" "${D}" "${DG}" "${C}" "${G}" "${D}")
     echo
     for ((l=0; l<ROWS; l++)); do
