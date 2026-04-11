@@ -1077,6 +1077,38 @@ const watchdogState = {
   log: []            // last 50 auto-approvals for debugging
 };
 
+// ─── TELEGRAM ALERTS ──────────────────────────────────────────────────
+const TELEGRAM_BOT_TOKEN = "8753533419:AAHrZSbJhYZu4EZjCw7HSFuv4p-vactPTvc";
+const TELEGRAM_CHAT_ID = "-1003841065210";
+let telegramAlertsEnabled = false;
+const telegramAlertCooldown = new Map(); // machineId:target → timestamp
+
+export function setTelegramEnabled(enabled) { telegramAlertsEnabled = enabled; }
+export function getTelegramEnabled() { return telegramAlertsEnabled; }
+
+async function sendTelegramAlert(machineName, target) {
+  if (!telegramAlertsEnabled) return;
+  const cooldownKey = `${machineName}:${target}`;
+  const lastSent = telegramAlertCooldown.get(cooldownKey) || 0;
+  if (Date.now() - lastSent < 60000) return; // max 1 alert per machine/target per minute
+  telegramAlertCooldown.set(cooldownKey, Date.now());
+
+  const emoji = target === "claude" ? "🔴" : "🔵";
+  const text = `${emoji} *Aprobación pendiente*\n\n${target === "claude" ? "Claude" : "Codex"} espera aprobación en *${machineName}*\n\n🎛️ [Abrir Control](https://macmini.tail48b61c.ts.net/teamwork.html)\n\n_Admirito by Claude_ 🤖`;
+
+  try {
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text, parse_mode: "Markdown" })
+    });
+    if (res.ok) console.log(`Telegram alert sent: ${machineName} → ${target}`);
+  } catch (e) {
+    console.error("Telegram alert failed:", e.message);
+  }
+}
+
 // Track last-fail times so we don't hammer offline machines every 30s
 const machineFailTimes = new Map(); // machineId → timestamp of last fail
 const OFFLINE_RETRY_MS = 120_000;   // retry offline machines every 2 min
@@ -1469,6 +1501,7 @@ async function watchdogCheck() {
         const buttonsStr = await detectClaudeApprovalButtons(machine);
         mState.claudeButtons = buttonsStr;
         if (hasClaudeToolApproval(buttonsStr)) {
+          sendTelegramAlert(machine.name, "claude");
           playApprovalSound();
           await autoApprove(machine, "claude", mState);
           claudeApproved = true;
@@ -1477,19 +1510,19 @@ async function watchdogCheck() {
 
       // --- CODEX DETECTION ---
       if (apps.codex && apps.codex !== "OFF") {
-        // 1. Check window title (fast, catches obvious cases)
         const codexTitle = (apps.codex || "").toLowerCase();
         const titleHasApproval = ["approve", "aprobar", "confirm", "confirmar",
           "accept", "aceptar", "permission", "permiso", "waiting", "esperando",
           "y/n", "allow", "permitir"].some((kw) => codexTitle.includes(kw));
         if (titleHasApproval) {
+          sendTelegramAlert(machine.name, "codex");
           playApprovalSound();
           await autoApprove(machine, "codex", mState);
           codexApproved = true;
         } else {
-          // 2. Read Codex app text content for numbered approval options
           const codexText = await detectCodexApproval(machine);
           if (hasCodexApproval(codexText)) {
+            sendTelegramAlert(machine.name, "codex");
             playApprovalSound();
             await autoApprove(machine, "codex", mState);
             codexApproved = true;
@@ -1498,15 +1531,16 @@ async function watchdogCheck() {
       }
 
       // --- TERMINAL DETECTION (Claude Code CLI / Codex CLI) ---
-      // Only check Terminal if we haven't already approved via Desktop apps
       if (!claudeApproved || !codexApproved) {
         const termResult = await detectTerminalApproval(machine);
-        mState.terminalState = termResult; // debug
+        mState.terminalState = termResult;
         if (!claudeApproved && termResult.includes("CLAUDE_TERM:PENDING")) {
+          sendTelegramAlert(machine.name, "claude");
           playApprovalSound();
           await autoApprove(machine, "terminal_claude", mState);
         }
         if (!codexApproved && termResult.includes("CODEX_TERM:PENDING")) {
+          sendTelegramAlert(machine.name, "codex");
           playApprovalSound();
           await autoApprove(machine, "codex", mState);
         }

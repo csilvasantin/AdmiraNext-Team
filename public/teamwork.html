@@ -286,6 +286,7 @@
         left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s;
       }
       .tw-toggle input:checked + .tw-toggle-slider { background: #2d6a4f; }
+      .tw-toggle input:checked + .tw-toggle-slider.tw-toggle-telegram { background: #0088cc; }
       .tw-toggle input:checked + .tw-toggle-slider::before { transform: translateX(22px); }
 
       .tw-watchdog-label { font-size: 13px; font-weight: 600; color: var(--ink); }
@@ -858,7 +859,7 @@
       <header class="hero">
         <div class="hero-inner">
           <div class="hero-text">
-            <p class="eyebrow">Control de equipo — v26.11.04.4</p>
+            <p class="eyebrow">Control de equipo — v26.11.04.5</p>
             <h1>AdmiraNext Control</h1>
             <p class="subtitle">Opera por separado el Consejo de Administracion en Mac y el Equipo en PC desde un mismo panel.</p>
           </div>
@@ -897,6 +898,16 @@
                 <span class="tw-watchdog-pulse off" id="watchdogPulse"></span>
               </span>
             </div>
+            <div class="tw-watchdog-inline">
+              <label class="tw-toggle">
+                <input type="checkbox" id="telegramToggle">
+                <span class="tw-toggle-slider tw-toggle-telegram"></span>
+              </label>
+              <span class="tw-watchdog-label">
+                Telegram
+                <span class="tw-watchdog-pulse off" id="telegramPulse"></span>
+              </span>
+            </div>
           </div>
           <div class="tw-inline-results">
             <div class="tw-approve-result tw-inline-result" id="approveCodexResult"></div>
@@ -931,7 +942,7 @@
       </div>
 
       <footer style="text-align:center;padding:24px 0 8px;color:var(--muted);font-size:12px;">
-          AdmiraNext Control v26.11.04.4 — 11/4/2026
+          AdmiraNext Control v26.11.04.5 — 11/4/2026
       </footer>
 
       <script src="./teamwork.js?v=20260331-11" type="module"></script>

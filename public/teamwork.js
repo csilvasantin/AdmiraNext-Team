@@ -720,6 +720,34 @@ watchdogToggle.addEventListener("change", async () => {
   } catch { /* ignore */ }
 });
 
+// ─── Telegram alerts toggle ──────────────────────────────────────────
+
+const telegramToggle = document.querySelector("#telegramToggle");
+const telegramPulse = document.querySelector("#telegramPulse");
+
+telegramToggle.addEventListener("change", async () => {
+  const enabled = telegramToggle.checked;
+  telegramPulse.classList.toggle("off", !enabled);
+  try {
+    await fetch(apiUrl("/api/teamwork/telegram"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled })
+    });
+  } catch { /* ignore */ }
+});
+
+async function loadTelegramState() {
+  try {
+    const res = await fetch(apiUrl("/api/teamwork/telegram"), { cache: "no-store" });
+    const data = await res.json();
+    if (data.ok) {
+      telegramToggle.checked = data.enabled;
+      telegramPulse.classList.toggle("off", !data.enabled);
+    }
+  } catch { /* ignore */ }
+}
+
 async function loadWatchdogStats() {
   try {
     const res = await fetch(apiUrl("/api/teamwork/watchdog"), { cache: "no-store" });
@@ -841,6 +869,7 @@ loadMachines();
 loadHistory();
 setTimeout(loadSnapshots, 2000);
 setTimeout(loadWatchdogStats, 3000);
+setTimeout(loadTelegramState, 3500);
 setInterval(loadHistory, 10_000);
 setInterval(loadSnapshots, 30_000);
 setInterval(loadWatchdogStats, 15_000);

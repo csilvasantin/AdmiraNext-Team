@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 
 import { createMachineEntry, readMachines, updateMachineStatus, updateMachineSync } from "./store.js";
-import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, healthCheckAll, getTailscaleStatus, sleepMachine, wakeMachine } from "./ssh-exec.js";
+import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, healthCheckAll, getTailscaleStatus, sleepMachine, wakeMachine, setTelegramEnabled, getTelegramEnabled } from "./ssh-exec.js";
 import { addEntry, getHistory } from "./teamwork-store.js";
 
 const PORT = 3030;
@@ -423,6 +423,19 @@ const server = createServer(async (request, response) => {
     }
     setMachineWatchdog(parsed.machineId, !!parsed.enabled);
     sendJson(response, 200, { ok: true, machineId: parsed.machineId, enabled: !!parsed.enabled });
+    return;
+  }
+
+  // Telegram alerts toggle
+  if (request.method === "GET" && url.pathname === "/api/teamwork/telegram") {
+    sendJson(response, 200, { ok: true, enabled: getTelegramEnabled() });
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/teamwork/telegram") {
+    const rawBody = await readRequestBody(request);
+    const parsed = rawBody ? JSON.parse(rawBody) : {};
+    setTelegramEnabled(!!parsed.enabled);
+    sendJson(response, 200, { ok: true, enabled: !!parsed.enabled });
     return;
   }
 
