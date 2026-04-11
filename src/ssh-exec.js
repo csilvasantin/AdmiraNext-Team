@@ -485,17 +485,27 @@ function isReachable(machine) {
 // Build the osascript command for approval based on target app
 function buildApproveScript(appName) {
   if (appName === "Claude") {
-    // Claude Desktop: click "Permitir una vez" button by coordinates
-    // The button is at bottom-right of the Claude window
+    // Claude Desktop: try multiple methods to approve
+    // 1. Click "Permitir una vez" by coordinates (bottom-right of window)
+    // 2. Keyboard shortcuts as fallback (Ctrl+Enter, Enter)
     return `tell application "Claude" to activate
 delay 0.3
 tell application "System Events" to tell process "Claude"
-  set {x, y} to position of front window
-  set {w, h} to size of front window
-  -- "Permitir una vez" is at approx 90% right, 98% bottom of the window
-  set btnX to x + (w * 0.9)
-  set btnY to y + (h * 0.98)
-  click at {btnX, btnY}
+  -- Method 1: click by coordinates (Electron button)
+  try
+    set {x, y} to position of front window
+    set {w, h} to size of front window
+    click at {x + (w * 0.9), y + (h * 0.98)}
+    delay 0.2
+  end try
+  -- Method 2: keyboard shortcuts as fallback
+  try
+    key code 36 using control down
+    delay 0.2
+  end try
+  try
+    key code 36
+  end try
 end tell`;
   }
   if (appName === "Codex") {
