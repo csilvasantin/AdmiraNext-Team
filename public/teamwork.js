@@ -823,10 +823,8 @@ function updateApproveButtonCounters() {
 
   const claudeBtn = document.querySelector("#approveClaudeBtn");
   const codexBtn = document.querySelector("#approveCodexBtn");
-  const cp = claudePending > 0 ? `(${claudePending}) ` : "";
-  const xp = codexPending > 0 ? `(${codexPending}) ` : "";
-  if (claudeBtn) claudeBtn.textContent = `${cp}Claude (${claudeActive})`;
-  if (codexBtn) codexBtn.textContent = `${xp}Codex (${codexActive})`;
+  if (claudeBtn) claudeBtn.textContent = `(${claudePending}) Claude (${claudeActive})`;
+  if (codexBtn) codexBtn.textContent = `(${codexPending}) Codex (${codexActive})`;
 }
 
 function checkPendingApprovals() {
