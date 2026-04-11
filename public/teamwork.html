@@ -29,9 +29,21 @@
         gap: 12px;
       }
 
+      .tw-section-title {
+        margin: 0 0 12px; font-size: 13px; font-weight: 800;
+        text-transform: uppercase; letter-spacing: 0.1em;
+        color: var(--muted);
+      }
+      .tw-section-approve { border-left: 3px solid #e74c3c; }
+      .tw-section-tasks { border-left: 3px solid #0088cc; }
+
+      .tw-approve-bar {
+        display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      }
+
       .tw-command-bar {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto auto auto auto auto auto;
+        grid-template-columns: minmax(0, 1fr) auto auto;
         gap: 6px;
         align-items: center;
       }
@@ -890,7 +902,7 @@
       <header class="hero">
         <div class="hero-inner">
           <div class="hero-text">
-            <p class="eyebrow">Control de equipo — v26.11.04.8</p>
+            <p class="eyebrow">Control de equipo — v26.11.04.9</p>
             <h1>AdmiraNext Control</h1>
             <p class="subtitle">Opera por separado el Consejo de Administracion en Mac y el Equipo en PC desde un mismo panel.</p>
           </div>
@@ -903,7 +915,43 @@
         </div>
       </header>
 
-      <section class="tw-panel">
+      <!-- ─── APROBACIONES ─── -->
+      <section class="tw-panel tw-section-approve">
+        <h3 class="tw-section-title">Aprobaciones</h3>
+        <div class="tw-approve-bar">
+          <button class="tw-send tw-action-btn tw-send-codex" id="approveCodexBtn" title="Aprobar solo equipos con Codex abierto">Codex</button>
+          <button class="tw-send tw-action-btn tw-send-claude" id="approveClaudeBtn" title="Aprobar solo equipos con Claude abierto">Claude</button>
+          <button class="tw-send tw-action-btn tw-send-onboarding" id="onboardingAllBtn">Onboarding</button>
+          <div class="tw-watchdog-inline">
+            <label class="tw-toggle">
+              <input type="checkbox" id="watchdogToggle">
+              <span class="tw-toggle-slider"></span>
+            </label>
+            <span class="tw-watchdog-label">
+              Auto-Approve
+              <span class="tw-watchdog-pulse off" id="watchdogPulse"></span>
+            </span>
+          </div>
+          <div class="tw-watchdog-inline">
+            <label class="tw-toggle">
+              <input type="checkbox" id="telegramToggle">
+              <span class="tw-toggle-slider tw-toggle-telegram"></span>
+            </label>
+            <span class="tw-watchdog-label">
+              Telegram
+              <span class="tw-watchdog-pulse off" id="telegramPulse"></span>
+            </span>
+          </div>
+        </div>
+        <div class="tw-inline-results">
+          <div class="tw-approve-result tw-inline-result" id="approveCodexResult"></div>
+          <div class="tw-approve-result tw-inline-result" id="approveClaudeResult"></div>
+        </div>
+      </section>
+
+      <!-- ─── ENCARGOS ─── -->
+      <section class="tw-panel tw-section-tasks">
+        <h3 class="tw-section-title">Encargos</h3>
         <div class="tw-command">
           <div class="tw-command-bar">
             <input class="tw-quick" id="quickInput" type="text"
@@ -916,35 +964,7 @@
               <option value="terminal">Solo Terminal</option>
             </select>
             <button class="tw-send tw-action-btn" id="sendAllBtn">Enviar</button>
-            <button class="tw-send tw-action-btn tw-send-codex" id="approveCodexBtn" title="Aprobar solo equipos con Codex abierto">Codex</button>
-            <button class="tw-send tw-action-btn tw-send-claude" id="approveClaudeBtn" title="Aprobar solo equipos con Claude abierto">Claude</button>
-            <button class="tw-send tw-action-btn tw-send-onboarding" id="onboardingAllBtn">Onboarding</button>
-            <div class="tw-watchdog-inline">
-              <label class="tw-toggle">
-                <input type="checkbox" id="watchdogToggle">
-                <span class="tw-toggle-slider"></span>
-              </label>
-              <span class="tw-watchdog-label">
-                Auto-Approve
-                <span class="tw-watchdog-pulse off" id="watchdogPulse"></span>
-              </span>
-            </div>
-            <div class="tw-watchdog-inline">
-              <label class="tw-toggle">
-                <input type="checkbox" id="telegramToggle">
-                <span class="tw-toggle-slider tw-toggle-telegram"></span>
-              </label>
-              <span class="tw-watchdog-label">
-                Telegram
-                <span class="tw-watchdog-pulse off" id="telegramPulse"></span>
-              </span>
-            </div>
           </div>
-          <div class="tw-inline-results">
-            <div class="tw-approve-result tw-inline-result" id="approveCodexResult"></div>
-            <div class="tw-approve-result tw-inline-result" id="approveClaudeResult"></div>
-          </div>
-          <p style="margin:10px 0 0;color:var(--muted);font-size:12px;">`onboarding` es local para esta sesion. `onboarding all` refresca consejo y equipo alcanzables usando una sola IA por maquina.</p>
         </div>
         <div class="tw-tg-inbox" id="tgInbox" style="display:none"></div>
         <div class="tw-feedback" id="feedback"></div>
@@ -974,10 +994,10 @@
       </div>
 
       <footer style="text-align:center;padding:24px 0 8px;color:var(--muted);font-size:12px;">
-          AdmiraNext Control v26.11.04.8 — 11/4/2026
+          AdmiraNext Control v26.11.04.9 — 11/4/2026
       </footer>
 
-      <script src="./teamwork.js?v=20260411-7" type="module"></script>
+      <script src="./teamwork.js?v=20260411-9" type="module"></script>
     <script>
       (function() {
         const c = document.getElementById("matrixCanvas");
