@@ -244,6 +244,7 @@ async function loadHistory() {
   }
 }
 
+// Tailscale status enrichment (IP, lastSeen) — does NOT override machine status
 async function loadTailscaleStatus() {
   if (isStaticMode) return;
   try {
@@ -251,16 +252,12 @@ async function loadTailscaleStatus() {
     if (!res.ok) return;
     const data = await res.json();
     tailscaleData = data.machines || {};
-    // Merge live status into machines array
     for (const m of machines) {
       const ts = tailscaleData[m.id];
-      if (ts && ts.tailscale) {
-        // Only override status if Tailscale actually found this machine
-        m.status = ts.online ? (ts.active ? "online" : "idle") : "offline";
-      }
       if (ts?.ip) m._tsIp = ts.ip;
       if (ts?.lastSeen) m._tsLastSeen = ts.lastSeen;
       if (ts?.tailscale?.curAddr) m._tsCurAddr = ts.tailscale.curAddr;
+      // Status comes from /api/machines (healthCheck), NOT overridden here
     }
   } catch { /* silently fail */ }
 }
@@ -992,7 +989,7 @@ setTimeout(loadTelegramInbox, 4000);
 setInterval(loadHistory, 10_000);
 setInterval(loadSnapshots, 30_000);
 setInterval(loadWatchdogStats, 15_000);
-// Refresh Tailscale status every 60s (synced with server healthCheck)
-setInterval(async () => { await loadTailscaleStatus(); renderMachineApproveList(null); }, 60_000);
+// Refresh machines status every 60s (synced with server healthCheck)
+setInterval(() => { loadMachines(); }, 60_000);
 // Poll Telegram inbox every 10s
 setInterval(loadTelegramInbox, 10_000);
