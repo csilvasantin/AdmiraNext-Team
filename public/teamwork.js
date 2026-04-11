@@ -251,12 +251,13 @@ async function loadTailscaleStatus() {
     // Merge live status into machines array
     for (const m of machines) {
       const ts = tailscaleData[m.id];
-      if (ts) {
+      if (ts && ts.tailscale) {
+        // Only override status if Tailscale actually found this machine
         m.status = ts.online ? (ts.active ? "online" : "idle") : "offline";
-        if (ts.ip) m._tsIp = ts.ip;
-        if (ts.lastSeen) m._tsLastSeen = ts.lastSeen;
-        if (ts.tailscale?.curAddr) m._tsCurAddr = ts.tailscale.curAddr;
       }
+      if (ts?.ip) m._tsIp = ts.ip;
+      if (ts?.lastSeen) m._tsLastSeen = ts.lastSeen;
+      if (ts?.tailscale?.curAddr) m._tsCurAddr = ts.tailscale.curAddr;
     }
   } catch { /* silently fail */ }
 }
