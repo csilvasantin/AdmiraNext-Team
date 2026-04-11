@@ -284,16 +284,28 @@ const server = createServer(async (request, response) => {
     }
 
     const reachable = await getReachableMachines();
+    const snapshots = getAllSnapshots();
     const targets = target === "all" ? ["claude", "codex"] : [target];
-    const results = await Promise.allSettled(
-      reachable.flatMap((machine) =>
-        targets.map((t) => sendPromptToMachine(machine.id, prompt, t))
-      )
-    );
 
+    // Only send to machines where the target app is actually open
+    const jobs = [];
+    for (const machine of reachable) {
+      const snap = snapshots[machine.id];
+      for (const t of targets) {
+        const appState = t === "claude" ? snap?.claudeState : snap?.codexState;
+        const isOpen = appState !== null && appState !== undefined && appState !== "no-window" && appState !== "OFF";
+        if (isOpen) {
+          jobs.push(sendPromptToMachine(machine.id, prompt, t));
+        } else {
+          jobs.push(Promise.resolve({ name: machine.name, ok: false, error: `${t} no abierto`, skipped: true }));
+        }
+      }
+    }
+
+    const results = await Promise.allSettled(jobs);
     const output = results.map((r) => {
       const v = r.value || { ok: false, error: "rejected" };
-      return { machine: v.name || v.machine, ok: v.ok, error: v.error };
+      return { machine: v.name || v.machine, ok: v.ok, error: v.error, skipped: v.skipped };
     });
     sendJson(response, 200, { ok: true, results: output });
     return;

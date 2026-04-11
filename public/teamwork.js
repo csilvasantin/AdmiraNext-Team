@@ -118,8 +118,10 @@ async function sendToAll(prompt) {
     });
     const data = await res.json();
     const ok = data.results.filter((r) => r.ok).length;
+    const skipped = data.results.filter((r) => r.skipped).length;
     const label = target === "all" ? "Claude + Codex" : target.charAt(0).toUpperCase() + target.slice(1);
-    showFeedback(`Enviado a ${ok} destinos (${label} en todos los equipos)`, true);
+    const extra = skipped ? ` (${skipped} sin app abierta)` : "";
+    showFeedback(`Enviado a ${ok} equipos con ${label}${extra}`, ok > 0);
     quickInput.value = "";
   } catch (err) {
     showFeedback(`Error: ${err.message}`, false);
