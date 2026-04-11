@@ -111,11 +111,14 @@ async function sendToAll(prompt) {
   sendAllBtn.textContent = "Enviando...";
 
   try {
+    const payload = { prompt, target };
+    if (pendingTgImage) payload.image = pendingTgImage;
     const res = await fetch(apiUrl("/api/teamwork/send-all"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, target })
+      body: JSON.stringify(payload)
     });
+    pendingTgImage = null; // clear after sending
     const data = await res.json();
     const ok = data.results.filter((r) => r.ok).length;
     const skipped = data.results.filter((r) => r.skipped).length;
@@ -945,18 +948,26 @@ async function loadTelegramInbox() {
     if (last?.text && input) {
       input.value = last.text;
       const targetLabel = last.target === "claude" ? "Claude" : "Codex";
-      input.placeholder = `📱 ${last.from} → ${targetLabel}: listo para enviar`;
+      const imgIcon = last.image ? " 📎" : "";
+      input.placeholder = `📱 ${last.from} → ${targetLabel}${imgIcon}: listo para enviar`;
       if (targetSelect) targetSelect.value = last.target || "codex";
+      pendingTgImage = last.image || null;
     }
   } catch { /* ignore */ }
 }
 
+let pendingTgImage = null; // image URL from Telegram message
+
 window.useTgMessage = function(index, text, target) {
   const input = document.querySelector("#quickInput");
   const targetSelect = document.querySelector("#sendAllTarget");
-  if (input && text) {
-    input.value = text;
+  if (input) {
+    input.value = text || "";
     if (targetSelect && target) targetSelect.value = target;
+    // Find the image from the inbox data
+    const msgEl = document.querySelectorAll(".tw-tg-msg")[index];
+    const thumb = msgEl?.querySelector(".tw-tg-thumb");
+    pendingTgImage = thumb?.src || null;
     input.focus();
   }
 };

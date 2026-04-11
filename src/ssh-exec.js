@@ -1135,6 +1135,20 @@ async function ocrDetectApproval(machine) {
   };
 }
 
+// Copy an image file to a remote machine via SCP
+export function copyImageToMachine(machine, localPath) {
+  return new Promise((resolve, reject) => {
+    if (isLocalMachine(machine)) { resolve(); return; }
+    const user = machine.ssh?.user || "csilvasantin";
+    const host = machine.ssh?.ip_tailscale || machine.ssh?.host;
+    const remotePath = `/tmp/${localPath.split("/").pop()}`;
+    const args = ["-i", SSH_IDENTITY, "-o", "ConnectTimeout=5", "-o", "BatchMode=yes", localPath, `${user}@${host}:${remotePath}`];
+    execFile("scp", args, { timeout: 15000 }, (err) => {
+      if (err) reject(err); else resolve(remotePath);
+    });
+  });
+}
+
 async function sendTelegramAlert(machineName, target) {
   if (!telegramAlertsEnabled) return;
   const cooldownKey = `${machineName}:${target}`;

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 
 import { createMachineEntry, readMachines, updateMachineStatus, updateMachineSync } from "./store.js";
-import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, healthCheckAll, getTailscaleStatus, sleepMachine, wakeMachine, setTelegramEnabled, getTelegramEnabled } from "./ssh-exec.js";
+import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, healthCheckAll, getTailscaleStatus, sleepMachine, wakeMachine, setTelegramEnabled, getTelegramEnabled, copyImageToMachine } from "./ssh-exec.js";
 import { addEntry, getHistory } from "./teamwork-store.js";
 
 const PORT = 3030;
@@ -277,11 +277,31 @@ const server = createServer(async (request, response) => {
     const rawBody = await readRequestBody(request);
     const parsed = rawBody ? JSON.parse(rawBody) : {};
     const prompt = parsed.prompt?.trim();
+    const imageUrl = parsed.image || null;
     const target = parsed.target || "all";
-    if (!prompt) {
+    if (!prompt && !imageUrl) {
       sendJson(response, 400, { error: "prompt obligatorio" });
       return;
     }
+
+    // Download image from Telegram if provided, save locally for machines to access
+    let localImagePath = null;
+    if (imageUrl) {
+      try {
+        const imgRes = await fetch(imageUrl);
+        const imgBuf = Buffer.from(await imgRes.arrayBuffer());
+        const { writeFile: wf } = await import("node:fs/promises");
+        localImagePath = `/tmp/tw_tg_image_${Date.now()}.jpg`;
+        await wf(localImagePath, imgBuf);
+      } catch (e) {
+        console.error("Failed to download Telegram image:", e.message);
+      }
+    }
+
+    // Append image info to prompt if image was downloaded
+    const fullPrompt = localImagePath
+      ? `${prompt || ""}\n\n[Imagen adjunta desde Telegram: ${localImagePath}]`
+      : prompt;
 
     const reachable = await getReachableMachines();
     const wdState = getWatchdogState();
@@ -295,7 +315,11 @@ const server = createServer(async (request, response) => {
         const appState = t === "claude" ? mState?.claudeState : mState?.codexState;
         const isOpen = appState !== null && appState !== undefined && appState !== "no-window" && appState !== "OFF";
         if (isOpen) {
-          jobs.push(sendPromptToMachine(machine.id, prompt, t));
+          // Copy image to remote machine if available
+          const sendWithImage = localImagePath
+            ? copyImageToMachine(machine, localImagePath).then(() => sendPromptToMachine(machine.id, fullPrompt, t)).catch(() => sendPromptToMachine(machine.id, fullPrompt, t))
+            : sendPromptToMachine(machine.id, fullPrompt, t);
+          jobs.push(sendWithImage);
         } else {
           jobs.push(Promise.resolve({ name: machine.name, ok: false, error: `${t} no abierto`, skipped: true }));
         }
