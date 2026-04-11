@@ -1158,10 +1158,23 @@ async function ocrDetectApproval(machine) {
       try { unlinkSync(filepath); } catch {}
       if (error || !stdout) { resolve({ claudePending: false, codexPending: false }); return; }
       const text = stdout.toLowerCase();
-      const approvalKeywords = ["allow", "permitir", "permitir una vez", "allow once", "always allow",
-        "deny", "denegar", "approve", "accept", "confirm", "tool use", "y/n", "aceptar"];
-      const hasApproval = approvalKeywords.some((kw) => text.includes(kw));
-      const isClaude = text.includes("claude") || text.includes("anthropic") || text.includes("permitir que claude");
+      // Specific multi-word phrases that indicate real approval dialogs
+      const approvalPhrases = [
+        "permitir una vez", "allow once", "always allow for project",
+        "permitir que claude", "permitir que codex",
+        "do you want to allow", "tool use",
+        "denegar", "deny"
+      ];
+      // Single keywords only count if NOT part of known false positives
+      const falsePositives = ["aceptar ediciones", "aceptar cambios", "accept edit"];
+      const hasFalsePositive = falsePositives.some((fp) => text.includes(fp));
+
+      const hasPhrase = approvalPhrases.some((kw) => text.includes(kw));
+      // "permitir" alone only counts if "aceptar ediciones" is NOT present
+      const hasSingleKeyword = !hasFalsePositive && ["permitir", "allow", "approve"].some((kw) => text.includes(kw));
+      const hasApproval = hasPhrase || hasSingleKeyword;
+
+      const isClaude = text.includes("claude") || text.includes("anthropic");
       const isCodex = text.includes("codex") || text.includes("openai");
       resolve({
         claudePending: hasApproval && (isClaude || !isCodex),
