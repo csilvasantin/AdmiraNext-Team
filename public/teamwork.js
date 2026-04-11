@@ -878,12 +878,27 @@ function checkPendingApprovals() {
   }
 
   let html = "";
+  const pendingIds = [];
+  for (const [machineId, stats] of Object.entries(watchdogStats)) {
+    if (!stats) continue;
+    const machine = machines.find((m) => m.id === machineId);
+    const mName = machine?.name || machineId;
+    if (pendingClaude.includes(mName) || pendingCodex.includes(mName)) {
+      pendingIds.push(machineId);
+    }
+  }
   for (const name of pendingClaude) {
     html += `<span class="tw-alert-machine-item"><span class="claude-tag">C</span> ${name}</span>`;
   }
   for (const name of pendingCodex) {
     html += `<span class="tw-alert-machine-item"><span class="codex-tag">X</span> ${name}</span>`;
   }
+  // Add screenshots of pending machines
+  html += `<div class="tw-alert-screenshots">`;
+  for (const mid of pendingIds) {
+    html += `<img class="tw-alert-screenshot" src="${apiUrl(`/api/screenshots/${mid}`)}?t=${Date.now()}" alt="Captura" onerror="this.style.display='none'">`;
+  }
+  html += `</div>`;
   machineList.innerHTML = html;
 
   // Show/hide specific approve buttons
