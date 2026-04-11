@@ -528,7 +528,7 @@ server.listen(PORT, HOST, async () => {
   console.log(`AdmiraNext Team escuchando en http://${HOST}:${PORT}`);
   console.log("Ejecutando health check de máquinas...");
   await healthCheckAll();
-  startWatchdog(); // Auto-Approve ON por defecto al arrancar
+  startWatchdog(); // Watchdog scanning ON (auto-approve OFF by default)
   // Health check periódico cada 60s
   setInterval(async () => {
     try { await healthCheckAll(); } catch (e) { console.error("Health check error:", e.message); }

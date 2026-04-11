@@ -107,8 +107,8 @@ async function sendToAll(prompt) {
     return;
   }
   sendAllBtn.disabled = true;
-  sendAllBtn.textContent = "Enviando...";
   const target = sendAllTarget.value;
+  sendAllBtn.textContent = "Enviando...";
 
   try {
     const res = await fetch(apiUrl("/api/teamwork/send-all"), {
@@ -128,7 +128,7 @@ async function sendToAll(prompt) {
   }
 
   sendAllBtn.disabled = false;
-  sendAllBtn.textContent = "Enviar a todos";
+  sendAllBtn.textContent = "Enviar";
   loadHistory();
 }
 

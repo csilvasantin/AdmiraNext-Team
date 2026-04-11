@@ -1075,7 +1075,8 @@ const CODEX_APPROVAL_PATTERNS = [
 ];
 
 const watchdogState = {
-  enabled: false,
+  enabled: true,     // scanning always ON (detects pending approvals for alerts)
+  autoApprove: false, // auto-approve OFF by default (user toggles from UI)
   perMachine: {},    // { [machineId]: { enabled, claudeCount, codexCount, lastApproval, lastTarget } }
   intervalId: null,
   log: []            // last 50 auto-approvals for debugging
@@ -1507,8 +1508,10 @@ async function watchdogCheck() {
         if (hasClaudeToolApproval(buttonsStr)) {
           sendTelegramAlert(machine.name, "claude");
           playApprovalSound();
-          await autoApprove(machine, "claude", mState);
-          claudeApproved = true;
+          if (watchdogState.autoApprove) {
+            await autoApprove(machine, "claude", mState);
+            claudeApproved = true;
+          }
         }
       }
 
@@ -1521,15 +1524,19 @@ async function watchdogCheck() {
         if (titleHasApproval) {
           sendTelegramAlert(machine.name, "codex");
           playApprovalSound();
-          await autoApprove(machine, "codex", mState);
-          codexApproved = true;
+          if (watchdogState.autoApprove) {
+            await autoApprove(machine, "codex", mState);
+            codexApproved = true;
+          }
         } else {
           const codexText = await detectCodexApproval(machine);
           if (hasCodexApproval(codexText)) {
             sendTelegramAlert(machine.name, "codex");
             playApprovalSound();
-            await autoApprove(machine, "codex", mState);
-            codexApproved = true;
+            if (watchdogState.autoApprove) {
+              await autoApprove(machine, "codex", mState);
+              codexApproved = true;
+            }
           }
         }
       }
@@ -1541,12 +1548,12 @@ async function watchdogCheck() {
         if (!claudeApproved && termResult.includes("CLAUDE_TERM:PENDING")) {
           sendTelegramAlert(machine.name, "claude");
           playApprovalSound();
-          await autoApprove(machine, "terminal_claude", mState);
+          if (watchdogState.autoApprove) await autoApprove(machine, "terminal_claude", mState);
         }
         if (!codexApproved && termResult.includes("CODEX_TERM:PENDING")) {
           sendTelegramAlert(machine.name, "codex");
           playApprovalSound();
-          await autoApprove(machine, "codex", mState);
+          if (watchdogState.autoApprove) await autoApprove(machine, "codex", mState);
         }
       }
     })
@@ -1609,8 +1616,10 @@ export function stopWatchdog() {
 }
 
 export function setWatchdogEnabled(enabled) {
-  if (enabled) startWatchdog();
-  else stopWatchdog();
+  watchdogState.autoApprove = enabled;
+  // Watchdog scanning always runs (for alerts/detection)
+  // This toggle only controls auto-approval
+  if (!watchdogState.intervalId) startWatchdog();
 }
 
 export function setMachineWatchdog(machineId, enabled) {
@@ -1620,7 +1629,7 @@ export function setMachineWatchdog(machineId, enabled) {
 
 export function getWatchdogState() {
   return {
-    enabled: watchdogState.enabled,
+    enabled: watchdogState.autoApprove,
     perMachine: watchdogState.perMachine,
     log: watchdogState.log.slice(-20)
   };
