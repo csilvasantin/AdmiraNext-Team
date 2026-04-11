@@ -635,11 +635,14 @@ export function getAllSnapshots() {
 }
 
 function isActiveDesktopApp(state) {
-  // null/undefined = not checked, "no-window"/"OFF" = not running
-  // "" (empty string) = running but window has no title (still active)
-  if (state === null || state === undefined) return false;
+  // null/undefined = not checked yet
+  // "OFF" = process not running
+  // "no-window" = process running but no visible window (not actively used)
+  // "" (empty string) = window exists but no title (not actively used)
+  // Non-empty string like "Claude" or "Codex" = actively open with window
+  if (!state) return false; // null, undefined, ""
   if (state === "no-window" || state === "OFF") return false;
-  return true;
+  return true; // has actual window title = active
 }
 
 function pickOnboardingTarget(machine) {

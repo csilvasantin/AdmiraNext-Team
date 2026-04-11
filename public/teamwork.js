@@ -795,9 +795,9 @@ function updateApproveButtonCounters() {
     if (!stats) continue;
     const cs = stats.claudeState;
     const xs = stats.codexState;
-    // Count machines with the app open (not null, not undefined, not OFF, not no-window)
-    const csOpen = cs !== null && cs !== undefined && cs !== "no-window" && cs !== "OFF";
-    const xsOpen = xs !== null && xs !== undefined && xs !== "no-window" && xs !== "OFF";
+    // Only count as open if there's a real window title (not empty, not no-window, not OFF)
+    const csOpen = Boolean(cs) && cs !== "no-window" && cs !== "OFF";
+    const xsOpen = Boolean(xs) && xs !== "no-window" && xs !== "OFF";
     if (csOpen) claudeActive++;
     if (xsOpen) codexActive++;
   }
