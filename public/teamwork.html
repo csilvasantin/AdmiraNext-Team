@@ -156,6 +156,42 @@
 
       .tw-history { margin-top: 24px; }
       .tw-history h3 { font-size: 16px; color: var(--muted); margin: 0 0 12px; }
+      .tw-history-layout {
+        display: grid;
+        grid-template-columns: 1fr 280px;
+        gap: 16px;
+        align-items: start;
+      }
+      @media (max-width: 768px) {
+        .tw-history-layout { grid-template-columns: 1fr; }
+      }
+      .tw-history-entries { min-width: 0; }
+      .tw-history-ocr {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px;
+        background: rgba(0,0,0,0.15);
+      }
+      .tw-ocr-title {
+        font-size: 11px; font-weight: 700; color: var(--muted);
+        text-transform: uppercase; letter-spacing: 0.05em;
+        margin-bottom: 8px;
+      }
+      .tw-ocr-screens { display: flex; flex-direction: column; gap: 8px; }
+      .tw-ocr-screen {
+        border-radius: 8px; overflow: hidden;
+        border: 1px solid var(--line);
+        position: relative;
+      }
+      .tw-ocr-screen img {
+        width: 100%; display: block;
+        border-radius: 8px;
+      }
+      .tw-ocr-screen-label {
+        position: absolute; bottom: 4px; left: 6px;
+        font-size: 9px; color: #fff; background: rgba(0,0,0,0.6);
+        padding: 1px 6px; border-radius: 4px;
+      }
 
       .tw-entry {
         padding: 12px 0;
@@ -906,7 +942,7 @@
       <header class="hero">
         <div class="hero-inner">
           <div class="hero-text">
-            <p class="eyebrow">Control de equipo — v26.11.04.40</p>
+            <p class="eyebrow">Control de equipo — v26.11.04.41</p>
             <h1>AdmiraNext Control</h1>
             <p class="subtitle">Opera por separado el Consejo de Administracion en Mac y el Equipo en PC desde un mismo panel.</p>
           </div>
@@ -980,7 +1016,13 @@
 
       <section class="tw-panel tw-history">
         <h3>Historial</h3>
-        <div id="historyList"><p class="tw-empty">Sin comandos enviados todavía.</p></div>
+        <div class="tw-history-layout">
+          <div class="tw-history-entries" id="historyList"><p class="tw-empty">Sin comandos enviados todavía.</p></div>
+          <div class="tw-history-ocr" id="ocrPreview">
+            <div class="tw-ocr-title">Última captura analizada</div>
+            <div class="tw-ocr-screens" id="ocrScreens"></div>
+          </div>
+        </div>
       </section>
     </main>
 
@@ -997,10 +1039,10 @@
       </div>
 
       <footer style="text-align:center;padding:24px 0 8px;color:var(--muted);font-size:12px;">
-          AdmiraNext Control v26.11.04.40 — 11/4/2026
+          AdmiraNext Control v26.11.04.41 — 11/4/2026
       </footer>
 
-      <script src="./teamwork.js?v=20260411-40" type="module"></script>
+      <script src="./teamwork.js?v=20260411-41" type="module"></script>
     <script>
       (function() {
         const c = document.getElementById("matrixCanvas");

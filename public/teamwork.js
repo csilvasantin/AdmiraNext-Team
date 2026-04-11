@@ -921,6 +921,24 @@ window.alertApprove = async function(target) {
 
 // ─── Init ──────────────────────────────────────────────────────────
 
+// ─── OCR Preview: show latest screenshots next to history ────────────
+
+function updateOcrPreview() {
+  const container = document.getElementById("ocrScreens");
+  if (!container) return;
+  const onlineMachines = machines.filter((m) => m.status === "online" || m.status === "idle" || m.status === "busy");
+  if (!onlineMachines.length) {
+    container.innerHTML = '<p style="color:var(--muted);font-size:11px">Sin máquinas online</p>';
+    return;
+  }
+  container.innerHTML = onlineMachines.map((m) => `
+    <div class="tw-ocr-screen">
+      <img src="${apiUrl(`/api/screenshots/${m.id}`)}?t=${Date.now()}" alt="${m.name}" onerror="this.style.display='none'">
+      <span class="tw-ocr-screen-label">${m.name}</span>
+    </div>
+  `).join("");
+}
+
 // ─── Telegram Inbox: receive tasks from Telegram group ───────────────
 
 const tgInbox = document.querySelector("#tgInbox");
@@ -1001,6 +1019,7 @@ setTimeout(loadSnapshots, 2000);
 setTimeout(loadWatchdogStats, 3000);
 setTimeout(loadTelegramState, 3500);
 setTimeout(loadTelegramInbox, 4000);
+setTimeout(updateOcrPreview, 5000);
 setInterval(loadHistory, 10_000);
 setInterval(loadSnapshots, 30_000);
 setInterval(loadWatchdogStats, 15_000);
@@ -1008,3 +1027,5 @@ setInterval(loadWatchdogStats, 15_000);
 setInterval(() => { loadMachines(); }, 60_000);
 // Poll Telegram inbox every 10s
 setInterval(loadTelegramInbox, 10_000);
+// Refresh OCR preview every 30s
+setInterval(updateOcrPreview, 30_000);
