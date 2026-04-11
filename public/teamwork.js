@@ -804,8 +804,8 @@ function updateApproveButtonCounters() {
 
   const claudeBtn = document.querySelector("#approveClaudeBtn");
   const codexBtn = document.querySelector("#approveCodexBtn");
-  if (claudeBtn) claudeBtn.textContent = claudeActive > 0 ? `Claude (${claudeActive})` : "Claude";
-  if (codexBtn) codexBtn.textContent = codexActive > 0 ? `Codex (${codexActive})` : "Codex";
+  if (claudeBtn) claudeBtn.textContent = `Claude (${claudeActive})`;
+  if (codexBtn) codexBtn.textContent = `Codex (${codexActive})`;
 }
 
 function checkPendingApprovals() {
