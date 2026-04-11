@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
-import { readFile, unlink } from "node:fs/promises";
+import { readFile, unlink, writeFile as writeFileAsync } from "node:fs/promises";
+import { writeFileSync, unlinkSync } from "node:fs";
 import { hostname, homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { readMachines, updateMachineStatus } from "./store.js";
@@ -1094,6 +1095,27 @@ const telegramAlertCooldown = new Map(); // machineId:target → timestamp
 export function setTelegramEnabled(enabled) { telegramAlertsEnabled = enabled; }
 export function getTelegramEnabled() { return telegramAlertsEnabled; }
 
+// OCR-based approval detection using tesseract on screenshot buffers
+async function ocrDetectApproval(imageBuffer) {
+  return new Promise((resolve) => {
+    const tmpFile = join(tmpdir(), `ocr-${Date.now()}.jpg`);
+    writeFileSync(tmpFile, imageBuffer);
+    execFile("/opt/homebrew/bin/tesseract", [tmpFile, "stdout", "--psm", "6", "-l", "eng"], { timeout: 8000 }, (error, stdout) => {
+      try { unlinkSync(tmpFile); } catch {}
+      if (error) { resolve({ claudePending: false, codexPending: false }); return; }
+      const text = (stdout || "").toLowerCase();
+      const approvalKeywords = ["allow", "approve", "accept", "confirm", "run tool", "tool use", "y/n", "permitir", "aceptar"];
+      const hasApproval = approvalKeywords.some((kw) => text.includes(kw));
+      const isClaude = text.includes("claude") || text.includes("anthropic");
+      const isCodex = text.includes("codex") || text.includes("openai");
+      resolve({
+        claudePending: hasApproval && (isClaude || !isCodex),
+        codexPending: hasApproval && isCodex
+      });
+    });
+  });
+}
+
 async function sendTelegramAlert(machineName, target) {
   if (!telegramAlertsEnabled) return;
   const cooldownKey = `${machineName}:${target}`;
@@ -1503,6 +1525,36 @@ async function watchdogCheck() {
 
       let claudeApproved = false;
       let codexApproved = false;
+
+      // --- OCR DETECTION on screenshots ---
+      // Check existing screenshot for approval keywords
+      const snap = machineSnapshots.get(machine.id);
+      if (snap && !mState._ocrChecked) {
+        const imgId = snap.type === "images" ? `${machine.id}-center` : machine.id;
+        const imgBuf = getImageBuffer(imgId);
+        if (imgBuf) {
+          try {
+            const ocrResult = await ocrDetectApproval(imgBuf);
+            if (ocrResult.claudePending) {
+              mState.claudeButtons = "OCR:approval-detected";
+              sendTelegramAlert(machine.name, "claude");
+              playApprovalSound();
+              if (watchdogState.autoApprove) {
+                await autoApprove(machine, "claude", mState);
+                claudeApproved = true;
+              }
+            }
+            if (ocrResult.codexPending) {
+              sendTelegramAlert(machine.name, "codex");
+              playApprovalSound();
+              if (watchdogState.autoApprove) {
+                await autoApprove(machine, "codex", mState);
+                codexApproved = true;
+              }
+            }
+          } catch { /* OCR failed, continue with other detection */ }
+        }
+      }
 
       // --- CLAUDE DESKTOP DETECTION ---
       if (apps.claude && apps.claude !== "no-window") {
