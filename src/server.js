@@ -439,8 +439,71 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  // Telegram inbox: pending tasks from group
+  if (request.method === "GET" && url.pathname === "/api/teamwork/telegram-inbox") {
+    sendJson(response, 200, { ok: true, messages: telegramInbox });
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/teamwork/telegram-inbox/dismiss") {
+    const rawBody = await readRequestBody(request);
+    const parsed = rawBody ? JSON.parse(rawBody) : {};
+    const idx = parsed.index;
+    if (typeof idx === "number" && idx >= 0 && idx < telegramInbox.length) {
+      telegramInbox.splice(idx, 1);
+    }
+    sendJson(response, 200, { ok: true, remaining: telegramInbox.length });
+    return;
+  }
+
   await serveStatic(url.pathname, response);
 });
+
+// ─── TELEGRAM INBOX: poll bot for messages from AdmiraNext group ──────
+const TG_BOT_TOKEN = "8637786558:AAHgUEv3pmfowsSt1lw2b1k_ORUXWtBsXV8";
+const TG_CHAT_ID = -1003800381744;
+const telegramInbox = [];
+let tgOffset = 0;
+
+async function pollTelegramInbox() {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/getUpdates?offset=${tgOffset}&limit=10&timeout=1`);
+    const data = await res.json();
+    for (const update of (data.result || [])) {
+      tgOffset = update.update_id + 1;
+      const msg = update.message;
+      if (!msg || msg.chat?.id !== TG_CHAT_ID) continue;
+      if (msg.from?.is_bot) continue; // ignore own bot messages
+
+      const entry = {
+        id: msg.message_id,
+        from: msg.from?.first_name || "Desconocido",
+        text: msg.text || msg.caption || "",
+        date: new Date(msg.date * 1000).toISOString(),
+        image: null
+      };
+
+      // Download photo if attached
+      if (msg.photo && msg.photo.length > 0) {
+        const fileId = msg.photo[msg.photo.length - 1].file_id; // largest size
+        try {
+          const fileRes = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/getFile?file_id=${fileId}`);
+          const fileData = await fileRes.json();
+          if (fileData.ok) {
+            entry.image = `https://api.telegram.org/file/bot${TG_BOT_TOKEN}/${fileData.result.file_path}`;
+          }
+        } catch { /* ignore */ }
+      }
+
+      if (entry.text || entry.image) {
+        telegramInbox.push(entry);
+        if (telegramInbox.length > 20) telegramInbox.shift(); // max 20
+        console.log(`Telegram inbox: "${entry.text}" from ${entry.from}`);
+      }
+    }
+  } catch (e) {
+    // silently fail — Telegram API may be temporarily unavailable
+  }
+}
 
 server.listen(PORT, HOST, async () => {
   console.log(`AdmiraNext Team escuchando en http://${HOST}:${PORT}`);
@@ -451,4 +514,7 @@ server.listen(PORT, HOST, async () => {
   setInterval(async () => {
     try { await healthCheckAll(); } catch (e) { console.error("Health check error:", e.message); }
   }, 60_000);
+  // Poll Telegram inbox cada 10s
+  setInterval(pollTelegramInbox, 10_000);
+  pollTelegramInbox(); // initial poll
 });

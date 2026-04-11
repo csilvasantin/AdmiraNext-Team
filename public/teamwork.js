@@ -865,13 +865,70 @@ window.alertApprove = async function(target) {
 
 // ─── Init ──────────────────────────────────────────────────────────
 
+// ─── Telegram Inbox: receive tasks from Telegram group ───────────────
+
+const tgInbox = document.querySelector("#tgInbox");
+
+async function loadTelegramInbox() {
+  if (isStaticMode) return;
+  try {
+    const res = await fetch(apiUrl("/api/teamwork/telegram-inbox"), { cache: "no-store" });
+    const data = await res.json();
+    if (!data.ok || !data.messages?.length) {
+      tgInbox.style.display = "none";
+      tgInbox.innerHTML = "";
+      return;
+    }
+    tgInbox.style.display = "flex";
+    tgInbox.innerHTML = data.messages.map((msg, i) => `
+      <div class="tw-tg-msg" title="Clic en Usar para cargar como prompt">
+        <span class="tw-tg-icon">📱</span>
+        <div class="tw-tg-body">
+          <div class="tw-tg-from">${msg.from} via Telegram</div>
+          <div class="tw-tg-text">${msg.text || "(imagen)"}</div>
+          <div class="tw-tg-time">${timeAgo(msg.date)}</div>
+        </div>
+        ${msg.image ? `<img class="tw-tg-thumb" src="${msg.image}" alt="Imagen">` : ""}
+        <div class="tw-tg-actions">
+          <button class="tw-tg-use" onclick="event.stopPropagation(); useTgMessage(${i}, ${JSON.stringify(msg.text || "").replace(/"/g, '&quot;')})">Usar</button>
+          <button class="tw-tg-dismiss" onclick="event.stopPropagation(); dismissTgMessage(${i})">✕</button>
+        </div>
+      </div>
+    `).join("");
+  } catch { /* ignore */ }
+}
+
+window.useTgMessage = function(index, text) {
+  const input = document.querySelector("#quickInput");
+  if (input && text) {
+    input.value = text;
+    input.focus();
+  }
+};
+
+window.dismissTgMessage = async function(index) {
+  try {
+    await fetch(apiUrl("/api/teamwork/telegram-inbox/dismiss"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ index })
+    });
+    loadTelegramInbox();
+  } catch { /* ignore */ }
+};
+
+// ─── Init ──────────────────────────────────────────────────────────
+
 loadMachines();
 loadHistory();
 setTimeout(loadSnapshots, 2000);
 setTimeout(loadWatchdogStats, 3000);
 setTimeout(loadTelegramState, 3500);
+setTimeout(loadTelegramInbox, 4000);
 setInterval(loadHistory, 10_000);
 setInterval(loadSnapshots, 30_000);
 setInterval(loadWatchdogStats, 15_000);
 // Refresh Tailscale status every 60s (synced with server healthCheck)
 setInterval(async () => { await loadTailscaleStatus(); renderMachineApproveList(null); }, 60_000);
+// Poll Telegram inbox every 10s
+setInterval(loadTelegramInbox, 10_000);

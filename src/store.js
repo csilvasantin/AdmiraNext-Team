@@ -103,13 +103,28 @@ function buildNote(payload, checklistSummary) {
   return `Alta autoservicio. ${checklistSummary}.`;
 }
 
+// Cached last-good machines data to survive corrupted JSON from concurrent writes
+let _lastGoodMachines = null;
+
 export async function readMachines() {
-  const raw = await readFile(DATA_PATH, "utf8");
-  return JSON.parse(raw);
+  try {
+    const raw = await readFile(DATA_PATH, "utf8");
+    const data = JSON.parse(raw);
+    _lastGoodMachines = data; // cache good state
+    return data;
+  } catch (e) {
+    console.error(`machines.json corrupted (${e.message}), using cached data`);
+    if (_lastGoodMachines) return _lastGoodMachines;
+    throw e; // no cache available, fatal
+  }
 }
 
 export async function writeMachines(data) {
-  await writeFile(DATA_PATH, JSON.stringify(data, null, 2) + "\n", "utf8");
+  const json = JSON.stringify(data, null, 2) + "\n";
+  // Validate before writing
+  JSON.parse(json);
+  await writeFile(DATA_PATH, json, "utf8");
+  _lastGoodMachines = data;
 }
 
 export async function updateMachineStatus(id, status, note = "") {

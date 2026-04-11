@@ -429,6 +429,37 @@
       }
       .tw-approval-backdrop.visible { display: block; }
 
+      /* Telegram inbox */
+      .tw-tg-inbox {
+        margin-top: 12px; display: flex; flex-direction: column; gap: 8px;
+      }
+      .tw-tg-msg {
+        display: flex; gap: 10px; align-items: flex-start;
+        padding: 10px 14px; border-radius: 12px;
+        background: rgba(0, 136, 204, 0.08);
+        border: 1px solid rgba(0, 136, 204, 0.2);
+        cursor: pointer; transition: all 0.15s;
+      }
+      .tw-tg-msg:hover { background: rgba(0, 136, 204, 0.14); border-color: rgba(0, 136, 204, 0.4); }
+      .tw-tg-icon { font-size: 1.2rem; flex-shrink: 0; }
+      .tw-tg-body { flex: 1; min-width: 0; }
+      .tw-tg-from { font-size: 11px; color: #0088cc; font-weight: 700; }
+      .tw-tg-text { font-size: 13px; color: var(--ink); margin-top: 2px; word-break: break-word; }
+      .tw-tg-time { font-size: 10px; color: var(--muted); margin-top: 2px; }
+      .tw-tg-thumb { max-width: 60px; max-height: 60px; border-radius: 6px; object-fit: cover; }
+      .tw-tg-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
+      .tw-tg-use {
+        padding: 5px 10px; border-radius: 8px; border: none;
+        background: #0088cc; color: white; font-size: 11px;
+        font-weight: 600; cursor: pointer;
+      }
+      .tw-tg-use:hover { opacity: 0.85; }
+      .tw-tg-dismiss {
+        padding: 5px 8px; border-radius: 8px; border: none;
+        background: rgba(255,255,255,0.08); color: var(--muted);
+        font-size: 11px; cursor: pointer;
+      }
+
       .tw-machines-approve {
         margin-top: 18px;
         padding: 24px;
@@ -859,7 +890,7 @@
       <header class="hero">
         <div class="hero-inner">
           <div class="hero-text">
-            <p class="eyebrow">Control de equipo — v26.11.04.6</p>
+            <p class="eyebrow">Control de equipo — v26.11.04.7</p>
             <h1>AdmiraNext Control</h1>
             <p class="subtitle">Opera por separado el Consejo de Administracion en Mac y el Equipo en PC desde un mismo panel.</p>
           </div>
@@ -915,6 +946,7 @@
           </div>
           <p style="margin:10px 0 0;color:var(--muted);font-size:12px;">`onboarding` es local para esta sesion. `onboarding all` refresca consejo y equipo alcanzables usando una sola IA por maquina.</p>
         </div>
+        <div class="tw-tg-inbox" id="tgInbox" style="display:none"></div>
         <div class="tw-feedback" id="feedback"></div>
       </section>
 
@@ -942,7 +974,7 @@
       </div>
 
       <footer style="text-align:center;padding:24px 0 8px;color:var(--muted);font-size:12px;">
-          AdmiraNext Control v26.11.04.6 — 11/4/2026
+          AdmiraNext Control v26.11.04.7 — 11/4/2026
       </footer>
 
       <script src="./teamwork.js?v=20260331-11" type="module"></script>
