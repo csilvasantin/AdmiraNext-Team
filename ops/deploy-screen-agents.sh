@@ -103,12 +103,13 @@ deploy_to_machine() {
   generate_plist "$machine_id" | ssh $SSH_OPTS "$target" "cat > ~/$PLIST_PATH"
   echo "  OK Plist installed at ~/$PLIST_PATH"
 
-  # Stop old agents (any location)
-  ssh $SSH_OPTS "$target" "pkill -9 -f screen-agent 2>/dev/null; launchctl bootout gui/\$(id -u) ~/Library/LaunchAgents/$PLIST_NAME.plist 2>/dev/null; rm -f /tmp/screen-agent.sh /tmp/screen-agent.py 2>/dev/null; true" 2>/dev/null
-  sleep 1
+  # Stop old agents: bootout first (graceful), then kill stragglers
+  ssh $SSH_OPTS "$target" "launchctl bootout gui/\$(id -u) ~/Library/LaunchAgents/$PLIST_NAME.plist 2>/dev/null; true" 2>/dev/null
+  ssh $SSH_OPTS "$target" "pkill -9 -f 'screen-agent\.\(sh\|py\)' 2>/dev/null; rm -f /tmp/screen-agent.sh /tmp/screen-agent.py ~/screen-agent.py 2>/dev/null; true" 2>/dev/null
+  sleep 2
 
-  # Start new agent (background + wait to avoid hanging on launchctl)
-  ssh $SSH_OPTS "$target" "launchctl bootstrap gui/\$(id -u) ~/$PLIST_PATH 2>/dev/null &" 2>/dev/null || true
+  # Start new agent
+  ssh $SSH_OPTS "$target" "nohup launchctl bootstrap gui/\$(id -u) ~/$PLIST_PATH </dev/null >/dev/null 2>&1 &" 2>/dev/null || true
   sleep 3
   echo "  OK Agent restarted (launchd Aqua)"
 
