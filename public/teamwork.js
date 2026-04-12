@@ -392,26 +392,20 @@ function renderMachineRow(m, snapshots) {
         <span class="tw-auto-badge ${m.status === "online" || m.status === "busy" ? "" : "tw-auto-badge-off"}" data-watchdog-machine="${m.id}">${remoteReady ? "🤖 0" : m.status || "offline"}</span>
         ${group === "council" && remoteReady ? `
         <div class="tw-pillar-machine" data-pillar-machine="${m.id}">
-          <div class="tw-pillar-btn-wrap">
-            <button class="tw-pillar-btn tw-pillar-t" data-pillar="${m.id}" data-pillar-app="telegram" type="button" title="Telegram">T</button>
-            <div class="tw-pillar-menu" data-pillar-menu="${m.id}-telegram" hidden>
-              <button data-pillar-action="open" data-pillar-target="${m.id}" data-pillar-app="telegram" type="button">Abrir</button>
-              <button data-pillar-action="close" data-pillar-target="${m.id}" data-pillar-app="telegram" type="button">Cerrar</button>
-            </div>
+          <div class="tw-pillar-group">
+            <span class="tw-pillar-icon tw-pillar-t" title="Telegram"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></span>
+            <button class="tw-pillar-act tw-pillar-act-open" data-pillar-action="open" data-pillar-target="${m.id}" data-pillar-app="telegram" type="button" title="Abrir Telegram">Abrir</button>
+            <button class="tw-pillar-act tw-pillar-act-close" data-pillar-action="close" data-pillar-target="${m.id}" data-pillar-app="telegram" type="button" title="Cerrar Telegram">Cerrar</button>
           </div>
-          <div class="tw-pillar-btn-wrap">
-            <button class="tw-pillar-btn tw-pillar-x" data-pillar="${m.id}" data-pillar-app="codex" type="button" title="Codex">X</button>
-            <div class="tw-pillar-menu" data-pillar-menu="${m.id}-codex" hidden>
-              <button data-pillar-action="open" data-pillar-target="${m.id}" data-pillar-app="codex" type="button">Abrir</button>
-              <button data-pillar-action="close" data-pillar-target="${m.id}" data-pillar-app="codex" type="button">Cerrar</button>
-            </div>
+          <div class="tw-pillar-group">
+            <span class="tw-pillar-icon tw-pillar-x" title="Codex"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21 2H3a1 1 0 0 0-1 1v18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zm-1 18H4V4h16v16zM6 7h2v2H6V7zm4 0h8v2h-8V7zm-4 4h2v2H6v-2zm4 4h8v2h-8v-2zm0-4h8v2h-8v-2zm-4 4h2v2H6v-2z"/></svg></span>
+            <button class="tw-pillar-act tw-pillar-act-open" data-pillar-action="open" data-pillar-target="${m.id}" data-pillar-app="codex" type="button" title="Abrir Codex">Abrir</button>
+            <button class="tw-pillar-act tw-pillar-act-close" data-pillar-action="close" data-pillar-target="${m.id}" data-pillar-app="codex" type="button" title="Cerrar Codex">Cerrar</button>
           </div>
-          <div class="tw-pillar-btn-wrap">
-            <button class="tw-pillar-btn tw-pillar-c" data-pillar="${m.id}" data-pillar-app="claude" type="button" title="Claude Code">C</button>
-            <div class="tw-pillar-menu" data-pillar-menu="${m.id}-claude" hidden>
-              <button data-pillar-action="open" data-pillar-target="${m.id}" data-pillar-app="claude" type="button">Abrir</button>
-              <button data-pillar-action="close" data-pillar-target="${m.id}" data-pillar-app="claude" type="button">Cerrar</button>
-            </div>
+          <div class="tw-pillar-group">
+            <span class="tw-pillar-icon tw-pillar-c" title="Claude"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6zm4 4h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></span>
+            <button class="tw-pillar-act tw-pillar-act-open" data-pillar-action="open" data-pillar-target="${m.id}" data-pillar-app="claude" type="button" title="Abrir Claude">Abrir</button>
+            <button class="tw-pillar-act tw-pillar-act-close" data-pillar-action="close" data-pillar-target="${m.id}" data-pillar-app="claude" type="button" title="Cerrar Claude">Cerrar</button>
           </div>
         </div>` : ""}
       </div>
@@ -620,22 +614,7 @@ function renderMachineApproveList(snapshots) {
     });
   });
 
-  // Per-machine pillar toggle (show/hide mini-menu)
-  machineApproveList.querySelectorAll(".tw-pillar-btn").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const machineId = btn.dataset.pillar;
-      const app = btn.dataset.pillarApp;
-      const menuId = `${machineId}-${app}`;
-      machineApproveList.querySelectorAll(".tw-pillar-menu").forEach((m) => {
-        if (m.dataset.pillarMenu !== menuId) m.hidden = true;
-      });
-      const menu = machineApproveList.querySelector(`[data-pillar-menu="${menuId}"]`);
-      if (menu) menu.hidden = !menu.hidden;
-    });
-  });
-
-  // Per-machine pillar action (Abrir / Cerrar)
+  // Per-machine pillar action (Abrir / Cerrar) — direct buttons, no popup
   machineApproveList.querySelectorAll("[data-pillar-action]").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.stopPropagation();
@@ -643,11 +622,9 @@ function renderMachineApproveList(snapshots) {
       const machineId = btn.dataset.pillarTarget;
       const app = btn.dataset.pillarApp;
 
-      const menu = btn.closest(".tw-pillar-menu");
-      if (menu) menu.hidden = true;
-
-      const pillarBtn = machineApproveList.querySelector(`[data-pillar="${machineId}"][data-pillar-app="${app}"]`);
-      if (pillarBtn) pillarBtn.classList.add("tw-pillar-loading");
+      btn.disabled = true;
+      const orig = btn.textContent;
+      btn.textContent = "...";
 
       try {
         const res = await fetch(apiUrl("/api/teamwork/pillar"), {
@@ -656,26 +633,17 @@ function renderMachineApproveList(snapshots) {
           body: JSON.stringify({ machineId, app, action })
         });
         const data = await res.json();
-        if (pillarBtn) {
-          pillarBtn.classList.remove("tw-pillar-loading");
-          pillarBtn.classList.add(data.ok ? "tw-pillar-ok" : "tw-pillar-fail");
-          setTimeout(() => { pillarBtn.classList.remove("tw-pillar-ok", "tw-pillar-fail"); }, 2000);
-        }
+        btn.textContent = data.ok ? "✓" : "✗";
+        btn.classList.add(data.ok ? "tw-pillar-act-ok" : "tw-pillar-act-fail");
+        setTimeout(() => { btn.textContent = orig; btn.disabled = false; btn.classList.remove("tw-pillar-act-ok", "tw-pillar-act-fail"); }, 2000);
       } catch {
-        if (pillarBtn) {
-          pillarBtn.classList.remove("tw-pillar-loading");
-          pillarBtn.classList.add("tw-pillar-fail");
-          setTimeout(() => { pillarBtn.classList.remove("tw-pillar-fail"); }, 2000);
-        }
+        btn.textContent = "✗";
+        btn.classList.add("tw-pillar-act-fail");
+        setTimeout(() => { btn.textContent = orig; btn.disabled = false; btn.classList.remove("tw-pillar-act-fail"); }, 2000);
       }
     });
   });
 }
-
-// Close pillar menus on outside click
-document.addEventListener("click", () => {
-  document.querySelectorAll(".tw-pillar-menu").forEach((m) => { m.hidden = true; });
-});
 
 // Approve buttons
 const approveClaudeBtn = document.querySelector("#approveClaudeBtn");

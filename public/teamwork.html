@@ -402,40 +402,52 @@
         color: #fff;
       }
       .tw-pillar-machine {
+        display: flex;
+        gap: 8px;
+        margin-top: 6px;
+        flex-wrap: wrap;
+      }
+      .tw-pillar-group {
         display: inline-flex;
-        gap: 4px;
-        margin-left: 6px;
+        align-items: center;
+        gap: 3px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 2px 4px;
       }
-      .tw-pillar-btn-wrap { position: relative; }
-      .tw-pillar-btn {
-        display: inline-flex; align-items: center; justify-content: center;
-        width: 22px; height: 22px; border: 1px solid var(--line);
-        border-radius: 6px; background: rgba(255,255,255,0.06);
-        color: var(--muted); font-size: 10px; font-weight: 800;
-        cursor: pointer; transition: all 0.2s;
+      .tw-pillar-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px; height: 20px;
+        flex-shrink: 0;
       }
-      .tw-pillar-btn:hover { border-color: #00b894; color: #00b894; background: rgba(0,184,148,0.1); }
-      .tw-pillar-t { color: #0088cc; border-color: rgba(0,136,204,0.3); }
-      .tw-pillar-t:hover { background: rgba(0,136,204,0.15); color: #0088cc; border-color: #0088cc; }
-      .tw-pillar-x { color: #0984e3; border-color: rgba(9,132,227,0.3); }
-      .tw-pillar-x:hover { background: rgba(9,132,227,0.15); color: #0984e3; border-color: #0984e3; }
-      .tw-pillar-c { color: #d63031; border-color: rgba(214,48,49,0.3); }
-      .tw-pillar-c:hover { background: rgba(214,48,49,0.15); color: #d63031; border-color: #d63031; }
-      .tw-pillar-ok { background: rgba(0,184,148,0.3) !important; border-color: #00b894 !important; color: #00b894 !important; }
-      .tw-pillar-fail { background: rgba(214,48,49,0.3) !important; border-color: #d63031 !important; color: #d63031 !important; }
-      .tw-pillar-loading { opacity: 0.5; pointer-events: none; }
-      .tw-pillar-menu {
-        position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
-        display: flex; flex-direction: column; gap: 2px;
-        background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
-        padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); z-index: 50; min-width: 60px;
+      .tw-pillar-icon.tw-pillar-t { color: #0088cc; }
+      .tw-pillar-icon.tw-pillar-x { color: #0984e3; }
+      .tw-pillar-icon.tw-pillar-c { color: #d63031; }
+      .tw-pillar-act {
+        padding: 2px 7px;
+        border: none;
+        border-radius: 5px;
+        font-size: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.15s;
       }
-      .tw-pillar-menu button {
-        padding: 4px 10px; border: none; border-radius: 6px;
-        background: transparent; color: var(--ink); font-size: 11px;
-        cursor: pointer; white-space: nowrap; text-align: center;
+      .tw-pillar-act:disabled { opacity: 0.4; cursor: wait; }
+      .tw-pillar-act-open {
+        background: rgba(0,184,148,0.15);
+        color: #00b894;
       }
-      .tw-pillar-menu button:hover { background: rgba(0,255,70,0.1); }
+      .tw-pillar-act-open:hover { background: rgba(0,184,148,0.3); }
+      .tw-pillar-act-close {
+        background: rgba(214,48,49,0.15);
+        color: #d63031;
+      }
+      .tw-pillar-act-close:hover { background: rgba(214,48,49,0.3); }
+      .tw-pillar-act-ok { background: rgba(0,184,148,0.4) !important; color: #00b894 !important; }
+      .tw-pillar-act-fail { background: rgba(214,48,49,0.4) !important; color: #d63031 !important; }
 
       /* Machine info dropdown */
       .tw-info-wrapper { position: relative; display: inline-block; vertical-align: middle; }
@@ -1016,7 +1028,7 @@
       <header class="hero">
         <div class="hero-inner">
           <div class="hero-text">
-            <p class="eyebrow">Control de equipo — v26.12.04.52</p>
+            <p class="eyebrow">Control de equipo — v26.12.04.53</p>
             <h1>AdmiraNext Control</h1>
             <p class="subtitle">Opera por separado el Consejo de Administracion en Mac y el Equipo en PC desde un mismo panel.</p>
           </div>
@@ -1113,10 +1125,10 @@
       </div>
 
       <footer style="text-align:center;padding:24px 0 8px;color:var(--muted);font-size:12px;">
-          AdmiraNext Control v26.12.04.52 — 11/4/2026
+          AdmiraNext Control v26.12.04.53 — 11/4/2026
       </footer>
 
-      <script src="./teamwork.js?v=20260412-52" type="module"></script>
+      <script src="./teamwork.js?v=20260412-53" type="module"></script>
     <script>
       (function() {
         const c = document.getElementById("matrixCanvas");
