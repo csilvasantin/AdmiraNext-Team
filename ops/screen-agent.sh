@@ -14,17 +14,30 @@ ALLOWED_APPS="Claude|Codex|Telegram"
 
 echo "Screen agent started: machine=$MACHINE_ID interval=${INTERVAL}s server=$SERVER"
 
+run_with_timeout() {
+  local timeout_secs="$1"; shift
+  "$@" &
+  local pid=$!
+  ( sleep "$timeout_secs"; kill "$pid" 2>/dev/null ) &
+  local watchdog=$!
+  wait "$pid" 2>/dev/null
+  local rc=$?
+  kill "$watchdog" 2>/dev/null
+  wait "$watchdog" 2>/dev/null
+  return $rc
+}
+
 ensure_focus() {
-  FRONT=$(osascript -e 'tell application "System Events" to get name of first process whose frontmost is true' 2>/dev/null)
+  FRONT=$(run_with_timeout 5 osascript -e 'tell application "System Events" to get name of first process whose frontmost is true' 2>/dev/null)
   if echo "$FRONT" | grep -qE "$ALLOWED_APPS"; then
     return 0
   fi
   # Switch focus: try Claude first, then Codex, then Telegram
   for app in Claude Codex Telegram; do
-    if osascript -e "tell application \"System Events\" to exists process \"$app\"" 2>/dev/null | grep -q true; then
-      osascript -e "tell application \"$app\" to activate" 2>/dev/null
+    if run_with_timeout 3 osascript -e "tell application \"System Events\" to exists process \"$app\"" 2>/dev/null | grep -q true; then
+      run_with_timeout 3 osascript -e "tell application \"$app\" to activate" 2>/dev/null
       sleep 0.5
-      echo "$(date +%H:%M:%S) Focus: $FRONT → $app"
+      echo "$(date +%H:%M:%S) Focus: $FRONT -> $app"
       return 0
     fi
   done

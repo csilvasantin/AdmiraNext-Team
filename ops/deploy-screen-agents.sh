@@ -50,7 +50,7 @@ generate_plist() {
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>/Users/csilvasantin/$REMOTE_SCRIPT</string>
+    <string>HOMEDIR_PLACEHOLDER/$REMOTE_SCRIPT</string>
     <string>$machine_id</string>
     <string>$INTERVAL</string>
     <string>$SERVER_URL</string>
@@ -99,8 +99,14 @@ deploy_to_machine() {
   ssh $SSH_OPTS "$target" "chmod +x ~/$REMOTE_SCRIPT"
   echo "  OK Script copied to ~/$REMOTE_SCRIPT"
 
-  # Generate and install plist
-  generate_plist "$machine_id" | ssh $SSH_OPTS "$target" "cat > ~/$PLIST_PATH"
+  # Ensure PyObjC is installed (needed for Quartz capture)
+  ssh $SSH_OPTS "$target" "python3 -c 'import Quartz' 2>/dev/null || pip3 install pyobjc-framework-Quartz pyobjc-framework-Cocoa 2>/dev/null" 2>/dev/null
+  echo "  OK PyObjC verified"
+
+  # Generate and install plist (resolve home dir on remote machine)
+  local remote_home
+  remote_home=$(ssh $SSH_OPTS "$target" 'echo $HOME' 2>/dev/null)
+  generate_plist "$machine_id" | sed "s|HOMEDIR_PLACEHOLDER|$remote_home|g" | ssh $SSH_OPTS "$target" "cat > ~/$PLIST_PATH"
   echo "  OK Plist installed at ~/$PLIST_PATH"
 
   # Stop old agents: bootout first (graceful), then kill stragglers
