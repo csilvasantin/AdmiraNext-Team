@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 
 import { createMachineEntry, readMachines, updateMachineStatus, updateMachineSync } from "./store.js";
-import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, setImageBuffer, setMachineSnapshot, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, healthCheckAll, getTailscaleStatus, sleepMachine, wakeMachine, setTelegramEnabled, getTelegramEnabled, copyImageToMachine } from "./ssh-exec.js";
+import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, setImageBuffer, setMachineSnapshot, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, healthCheckAll, getTailscaleStatus, sleepMachine, wakeMachine, setTelegramEnabled, getTelegramEnabled, copyImageToMachine, managePillarApp, managePillarAll } from "./ssh-exec.js";
 import { addEntry, getHistory } from "./teamwork-store.js";
 
 const PORT = 3030;
@@ -455,6 +455,33 @@ const server = createServer(async (request, response) => {
       };
     }
     sendJson(response, 200, { ok: true, updatedAt: new Date().toISOString(), machines: merged });
+    return;
+  }
+
+  // ── Pillar management (open/close Telegram, Codex, Claude Code) ──
+  if (request.method === "POST" && url.pathname === "/api/teamwork/pillar") {
+    const rawBody = await readRequestBody(request);
+    const parsed = rawBody ? JSON.parse(rawBody) : {};
+    const { machineId, app, action } = parsed;
+    if (!machineId || !app || !action) {
+      sendJson(response, 400, { error: "machineId, app y action son obligatorios" });
+      return;
+    }
+    const result = await managePillarApp(machineId, app, action);
+    sendJson(response, 200, result);
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/teamwork/pillar-all") {
+    const rawBody = await readRequestBody(request);
+    const parsed = rawBody ? JSON.parse(rawBody) : {};
+    const { action } = parsed;
+    if (!action || (action !== "open" && action !== "close")) {
+      sendJson(response, 400, { error: "action obligatorio: 'open' o 'close'" });
+      return;
+    }
+    const results = await managePillarAll(action);
+    sendJson(response, 200, { ok: true, action, results });
     return;
   }
 

@@ -665,6 +665,85 @@ export function getMachineSnapshot(machineId) {
   return machineSnapshots.get(machineId) || null;
 }
 
+// ── Pillar management (open/close Telegram, Codex, Claude Code) ──────────
+
+const PILLAR_APPS = {
+  telegram: { mac: "Telegram", win: "Telegram" },
+  codex: { mac: "Codex", win: "Codex" },
+  claude: { mac: "Claude", win: "Claude" }
+};
+
+function buildPillarMacScript(appName, action) {
+  if (action === "open") {
+    return `do shell script "open -a '${appName}'"`;
+  }
+  return `tell application "${appName}" to quit`;
+}
+
+function buildPillarWinScript(processName, action) {
+  if (action === "open") {
+    return `Start-Process "${processName}"`;
+  }
+  return `Get-Process -Name "${processName}" -ErrorAction SilentlyContinue | Stop-Process -Force`;
+}
+
+async function executePillarOnMachine(machine, app, action) {
+  const pillar = PILLAR_APPS[app];
+  if (!pillar) return { machine: machine.name, id: machine.id, ok: false, error: `Pilar desconocido: ${app}` };
+
+  if (hasWindowsAutomationChannel(machine)) {
+    const script = buildPillarWinScript(pillar.win, action);
+    const { error } = await execWindows(script);
+    return { machine: machine.name, id: machine.id, app, action, ok: !error, error: error?.message };
+  }
+
+  if (isLocalMachine(machine)) {
+    const script = buildPillarMacScript(pillar.mac, action);
+    const { error } = await execLocal(script);
+    return { machine: machine.name, id: machine.id, app, action, ok: !error, error: error?.message };
+  }
+
+  return new Promise((resolve) => {
+    const sshArgs = buildSshArgs(machine, false);
+    const script = buildPillarMacScript(pillar.mac, action);
+    const remoteCmd = script.split("\n").map((l) => `-e '${l.trim()}'`).join(" ");
+    sshArgs.push(`osascript ${remoteCmd}`);
+    execFile("ssh", sshArgs, { timeout: 10_000 }, (error) => {
+      resolve({ machine: machine.name, id: machine.id, app, action, ok: !error, error: error?.message });
+    });
+  });
+}
+
+export async function managePillarApp(machineId, app, action) {
+  const data = await readMachines();
+  const machine = data.machines.find((m) => m.id === machineId);
+  if (!machine || !isAutomationReady(machine)) {
+    return { machine: machineId, ok: false, error: "No encontrada o automatizacion deshabilitada" };
+  }
+  if (!hasWindowsAutomationChannel(machine) && !isReachable(machine) && !isLocalMachine(machine)) {
+    return { machine: machine.name, id: machine.id, ok: false, error: "offline" };
+  }
+  return executePillarOnMachine(machine, app, action);
+}
+
+export async function managePillarAll(action) {
+  const data = await readMachines();
+  const council = data.machines.filter((m) => (m.unitType || "council") === "council" && isAutomationReady(m));
+  const reachable = council.filter((m) => hasWindowsAutomationChannel(m) || isReachable(m) || isLocalMachine(m));
+  const unreachable = council.filter((m) => !hasWindowsAutomationChannel(m) && !isReachable(m) && !isLocalMachine(m));
+
+  const apps = Object.keys(PILLAR_APPS);
+  const results = await Promise.allSettled(
+    reachable.flatMap((machine) => apps.map((app) => executePillarOnMachine(machine, app, action)))
+  );
+
+  const output = results.map((r) => r.value || { ok: false, error: "rejected" });
+  for (const m of unreachable) {
+    output.push({ machine: m.name, id: m.id, ok: false, error: "offline", skipped: true });
+  }
+  return output;
+}
+
 export async function getReachableMachines() {
   const data = await readMachines();
   return data.machines.filter((m) => isAutomationReady(m) && (hasWindowsAutomationChannel(m) || isReachable(m) || isLocalMachine(m)));
