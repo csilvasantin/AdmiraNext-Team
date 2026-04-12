@@ -15,7 +15,7 @@
 set -eo pipefail
 
 SSH_KEY="$HOME/.ssh/admiranext_ed25519"
-SSH_OPTS="-i $SSH_KEY -o ConnectTimeout=5 -o BatchMode=yes -o StrictHostKeyChecking=no"
+SSH_OPTS="-i $SSH_KEY -o ConnectTimeout=5 -o BatchMode=yes -o StrictHostKeyChecking=no -o ServerAliveInterval=5 -o ServerAliveCountMax=2"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 AGENT_SRC="$SCRIPT_DIR/screen-agent.sh"
 SERVER_URL="https://macmini.tail48b61c.ts.net"
@@ -104,18 +104,15 @@ deploy_to_machine() {
   echo "  OK Plist installed at ~/$PLIST_PATH"
 
   # Stop old agents (any location)
-  ssh $SSH_OPTS "$target" "pkill -9 -f screen-agent 2>/dev/null; launchctl bootout gui/\$(id -u) ~/Library/LaunchAgents/$PLIST_NAME.plist 2>/dev/null; true"
+  ssh $SSH_OPTS "$target" "pkill -9 -f screen-agent 2>/dev/null; launchctl bootout gui/\$(id -u) ~/Library/LaunchAgents/$PLIST_NAME.plist 2>/dev/null; rm -f /tmp/screen-agent.sh /tmp/screen-agent.py 2>/dev/null; true" 2>/dev/null
   sleep 1
 
-  # Start new agent
-  ssh $SSH_OPTS "$target" "launchctl bootstrap gui/\$(id -u) ~/$PLIST_PATH 2>/dev/null; true"
+  # Start new agent (background + wait to avoid hanging on launchctl)
+  ssh $SSH_OPTS "$target" "launchctl bootstrap gui/\$(id -u) ~/$PLIST_PATH 2>/dev/null &" 2>/dev/null || true
+  sleep 3
   echo "  OK Agent restarted (launchd Aqua)"
 
-  # Clean up old /tmp copies
-  ssh $SSH_OPTS "$target" "rm -f /tmp/screen-agent.sh /tmp/screen-agent.py 2>/dev/null; true"
-
   # Verify
-  sleep 2
   local running
   running=$(ssh $SSH_OPTS "$target" "pgrep -f 'screen-agent.sh' | wc -l | tr -d ' '" 2>/dev/null || echo "0")
   if [ "$running" -gt 0 ] 2>/dev/null; then
