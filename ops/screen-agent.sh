@@ -36,10 +36,8 @@ while true; do
   # Ensure correct app is in focus
   ensure_focus
 
-  # Capture screen as JPEG — try screencapture first, fallback to Python+Quartz
-  screencapture -x -t jpg "$TMP_FILE" 2>/dev/null
-  if [ ! -s "$TMP_FILE" ]; then
-    python3 -c "
+  # Capture screen as JPEG — try Python+Quartz first (works without Screen Recording permission), fallback to screencapture
+  python3 -c "
 import Quartz
 from AppKit import NSBitmapImageRep
 region = Quartz.CGRectInfinite
@@ -49,6 +47,8 @@ if image:
     data = rep.representationUsingType_properties_(3, {})
     data.writeToFile_atomically_('$TMP_FILE', True)
 " 2>/dev/null
+  if [ ! -s "$TMP_FILE" ]; then
+    screencapture -x -t jpg "$TMP_FILE" 2>/dev/null
   fi
 
   if [ -f "$TMP_FILE" ] && [ -s "$TMP_FILE" ]; then
