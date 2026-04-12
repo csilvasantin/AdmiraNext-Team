@@ -46,6 +46,64 @@ AdmiraNext-Team/
 
 5. **Sync de estado**: POST a `/api/machines/:id/sync` con campos: status, currentFocus, note.
 
+## Screen Agent — Capturas remotas
+
+Cada Mac del consejo ejecuta un screen-agent que captura pantalla y la envía al servidor cada 30s.
+
+### Arquitectura
+
+```
+Mac remoto (council)
+├── ~/.admiranext/screen-agent.sh     # Script de captura (estable, no /tmp)
+├── ~/Library/LaunchAgents/com.admiranext.screen-agent.plist  # Sesión Aqua
+└── /tmp/screen-agent.log             # Log de salida
+
+Mac Mini (servidor)
+├── ops/screen-agent.sh               # Fuente canónica del script
+├── ops/deploy-screen-agents.sh       # Deploy a todas las council Macs
+└── POST /api/screenshots/:id         # Endpoint que recibe los JPEGs
+```
+
+### Captura: Quartz primario, screencapture fallback
+
+El screen-agent usa Python+Quartz (AppKit) como método primario porque:
+- **No necesita permiso de Grabación de Pantalla** (a diferencia de `screencapture`)
+- Funciona desde launchd Aqua sin configuración adicional
+- Si Quartz falla, intenta `screencapture` como fallback
+
+### Deploy
+
+```bash
+# Desde el Mac Mini — despliega a todas las council Macs online:
+cd /Users/csilvasantin/AdmiraNext-Team
+ops/deploy-screen-agents.sh
+
+# Dry run (solo muestra qué haría):
+ops/deploy-screen-agents.sh --dry-run
+```
+
+El script:
+1. Copia `screen-agent.sh` a `~/.admiranext/` en cada Mac (ruta estable)
+2. Genera e instala el LaunchAgent plist con machine-id correcto
+3. Reinicia el agente via `launchctl`
+4. Limpia copias viejas en /tmp
+5. Salta máquinas offline sin fallar
+
+### Pilares (Abrir/Cerrar apps remotamente)
+
+Los 3 pilares (Telegram, Codex, Claude Code) se pueden abrir/cerrar desde el panel:
+- **Botones globales**: "Abrir Todo" / "Cerrar Todo" en el header del Consejo (con confirmación)
+- **Por máquina**: iconos T/X/C con botones Abrir/Cerrar directos
+- **Iconos iluminados**: glow cuando la app está abierta, apagados si cerrada
+- **Burst capture**: tras abrir/cerrar, captura cada 5s x6 para feedback rápido
+- **API**: `POST /api/teamwork/pillar` y `/pillar-all`
+
+### Troubleshooting
+
+- **"Conectado — captura no disponible"**: Quartz y screencapture fallaron. Ejecutar `ops/deploy-screen-agents.sh` para reinstalar.
+- **Screenshot no se actualiza**: Verificar que el screen-agent corre: `ssh <machine> 'pgrep -f screen-agent'`
+- **Iconos apagados**: El watchdog tarda ~15s en el primer escaneo tras reinicio del servidor.
+
 ## Council Dashboard (Demo System)
 
 ### Visión general
