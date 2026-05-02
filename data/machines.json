@@ -1,6 +1,6 @@
 {
   "team": "AdmiraNext Team",
-  "updatedAt": "2026-04-16T19:39:15.634Z",
+  "updatedAt": "2026-05-02T11:19:34.239Z",
   "tailnet": "tail48b61c.ts.net",
   "machines": [
     {
@@ -14,7 +14,7 @@
       "location": "Madrid",
       "platform": "macOS",
       "status": "online",
-      "lastSeen": "2026-04-16T19:39:10.695Z",
+      "lastSeen": "2026-05-02T11:19:09.658Z",
       "currentFocus": "Offline — ultima conexion hace 5m ago",
       "note": "Sleep enviado desde dashboard",
       "ssh": {
@@ -59,7 +59,7 @@
       "location": "Madrid",
       "platform": "macOS",
       "status": "online",
-      "lastSeen": "2026-04-16T19:39:10.827Z",
+      "lastSeen": "2026-05-02T11:19:09.655Z",
       "currentFocus": "Online — detectado por Tailscale",
       "note": "Tailscale: macbookpronegro14.tail48b61c.ts.net",
       "ssh": {
@@ -81,7 +81,7 @@
       "location": "Madrid",
       "platform": "macOS",
       "status": "online",
-      "lastSeen": "2026-04-16T19:39:10.937Z",
+      "lastSeen": "2026-05-02T11:19:09.617Z",
       "currentFocus": "Online — detectado por Tailscale",
       "note": "Tailscale: macbookair16.tail48b61c.ts.net",
       "ssh": {
@@ -103,7 +103,7 @@
       "location": "Madrid",
       "platform": "macOS",
       "status": "offline",
-      "lastSeen": "2026-04-16T19:39:15.626Z",
+      "lastSeen": "2026-05-02T11:19:14.181Z",
       "currentFocus": "Offline — ultima conexion hace 1d ago",
       "note": "Tailscale app: macbookairluna (100.98.68.63) | Tailscale CLI: macbookairluna-1 (100.71.252.58)",
       "ssh": {
@@ -126,7 +126,7 @@
       "location": "Madrid",
       "platform": "macOS",
       "status": "offline",
-      "lastSeen": "2026-04-16T19:39:15.633Z",
+      "lastSeen": "2026-05-02T11:19:14.184Z",
       "currentFocus": "Online — detectado por Tailscale",
       "note": "Tailscale: macbook-air-de-carla.tail48b61c.ts.net",
       "ssh": {
@@ -147,8 +147,8 @@
       "machineRole": "Direccion",
       "location": "Madrid",
       "platform": "macOS",
-      "status": "online",
-      "lastSeen": "2026-04-16T19:39:10.969Z",
+      "status": "offline",
+      "lastSeen": "2026-05-02T11:19:34.239Z",
       "currentFocus": "Offline — ultima conexion hace 55m ago",
       "note": "Tailscale, SSH y GitHub operativos. Chrome, Claude y Codex instalados. ClaudeBot y CodexBot activos. Perfil principal CEO listo para trabajo diario.",
       "ssh": {
@@ -327,8 +327,8 @@
       "machineRole": "Direccion creativa",
       "location": "Madrid",
       "platform": "macOS",
-      "status": "offline",
-      "lastSeen": "2026-04-16T19:39:15.634Z",
+      "status": "online",
+      "lastSeen": "2026-05-02T11:19:21.405Z",
       "currentFocus": "Online — detectado por Tailscale",
       "note": "Tailscale: macbookairazul (100.84.81.45)",
       "ssh": {
